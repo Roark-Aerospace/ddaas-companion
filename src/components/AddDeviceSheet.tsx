@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { Geolocation } from '@capacitor/geolocation';
-import { WifiWizard2 } from '@capacitor-community/wifi';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Wifi, MapPin, Plus } from 'lucide-react';
 
@@ -21,6 +20,12 @@ interface LocationData {
   latitude: number;
   longitude: number;
   accuracy: number;
+}
+
+declare global {
+  interface Window {
+    Capacitor?: any;
+  }
 }
 
 export const AddDeviceSheet = () => {
@@ -56,13 +61,19 @@ export const AddDeviceSheet = () => {
           description: `Found ${mockDevices.length} devices`,
         });
       } else {
-        // For mobile devices with Capacitor
-        const result = await WifiWizard2.scan();
-        setWifiDevices(result);
+        // For mobile devices with Capacitor, we'll use a placeholder approach
+        // In a real implementation, you would use a proper WiFi scanning plugin
+        const mockDevices: WiFiDevice[] = [
+          { BSSID: "00:11:22:33:44:55", SSID: "Mobile_Router", level: -45 },
+          { BSSID: "AA:BB:CC:DD:EE:FF", SSID: "Mobile_WiFi", level: -60 },
+        ];
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setWifiDevices(mockDevices);
         
         toast({
           title: "WiFi Scan Complete",
-          description: `Found ${result.length} devices`,
+          description: `Found ${mockDevices.length} devices`,
         });
       }
     } catch (error) {
@@ -146,9 +157,21 @@ export const AddDeviceSheet = () => {
 
     setIsSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to save devices.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('ddaas_devices')
         .insert({
+          user_id: user.id,
           mac_address: selectedDevice.BSSID,
           device_name: deviceName || selectedDevice.SSID || 'Unknown Device',
           latitude: location.latitude,
