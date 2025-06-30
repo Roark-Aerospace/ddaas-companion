@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { Geolocation } from '@capacitor/geolocation';
-import { Wifi } from '@capawesome/capacitor-wifi';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Wifi as WifiIcon, MapPin, Plus } from 'lucide-react';
 
@@ -36,65 +34,35 @@ export const AddDeviceSheet = () => {
   const scanWifiDevices = async () => {
     setIsScanning(true);
     try {
-      // Check if we're on a mobile device with Capacitor
-      if (typeof window !== 'undefined' && (window as any).Capacitor) {
-        console.log('Scanning for WiFi networks using Capacitor WiFi plugin...');
-        
-        // Request permissions first
-        const permissionResult = await Wifi.requestPermissions();
-        console.log('WiFi permission result:', permissionResult);
-
-        if (permissionResult.location !== 'granted') {
-          toast({
-            title: "Permission Required",
-            description: "Location permission is required to scan for WiFi networks.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Scan for WiFi networks
-        const result = await Wifi.scan();
-        console.log('WiFi scan result:', result);
-
-        const devices: WiFiDevice[] = result.networks.map((network: any) => ({
-          bssid: network.bssid,
-          ssid: network.ssid || 'Hidden Network',
-          level: network.level
-        }));
-
-        setWifiDevices(devices);
-        
-        toast({
-          title: "WiFi Scan Complete",
-          description: `Found ${devices.length} devices`,
-        });
-      } else {
-        // For web/development, use mock data with a note
-        console.log('Running in web mode - using mock WiFi data');
-        
-        const mockDevices: WiFiDevice[] = [
-          { bssid: "00:11:22:33:44:55", ssid: "Home_Router", level: -45 },
-          { bssid: "AA:BB:CC:DD:EE:FF", ssid: "Office_WiFi", level: -60 },
-          { bssid: "12:34:56:78:90:AB", ssid: "Neighbor_WiFi", level: -75 },
-          { bssid: "FF:EE:DD:CC:BB:AA", ssid: "Smart_TV", level: -50 },
-          { bssid: "11:22:33:44:55:66", ssid: "IoT_Device", level: -65 },
-        ];
-        
-        // Simulate scanning delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setWifiDevices(mockDevices);
-        
-        toast({
-          title: "WiFi Scan Complete (Mock Data)",
-          description: `Found ${mockDevices.length} mock devices. Real scanning works on mobile devices.`,
-        });
-      }
+      console.log('WiFi scanning started...');
+      
+      // For now, using mock data until the Capawesome WiFi plugin is properly configured
+      // This requires native mobile setup with: npm install @capawesome/capacitor-wifi
+      // and npx cap sync after installation
+      
+      const mockDevices: WiFiDevice[] = [
+        { bssid: "00:11:22:33:44:55", ssid: "Home_Router", level: -45 },
+        { bssid: "AA:BB:CC:DD:EE:FF", ssid: "Office_WiFi", level: -60 },
+        { bssid: "12:34:56:78:90:AB", ssid: "Neighbor_WiFi", level: -75 },
+        { bssid: "FF:EE:DD:CC:BB:AA", ssid: "Smart_TV", level: -50 },
+        { bssid: "11:22:33:44:55:66", ssid: "IoT_Device", level: -65 },
+        { bssid: "22:33:44:55:66:77", ssid: "Mobile_Hotspot", level: -55 },
+      ];
+      
+      // Simulate scanning delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setWifiDevices(mockDevices);
+      
+      toast({
+        title: "WiFi Scan Complete",
+        description: `Found ${mockDevices.length} devices (using mock data for demo)`,
+      });
+      
     } catch (error) {
       console.error('WiFi scanning error:', error);
       toast({
         title: "WiFi Scan Failed",
-        description: "Unable to scan for WiFi devices. Make sure WiFi is enabled and permissions are granted.",
+        description: "Unable to scan for WiFi devices. Make sure WiFi is enabled.",
         variant: "destructive",
       });
     } finally {
