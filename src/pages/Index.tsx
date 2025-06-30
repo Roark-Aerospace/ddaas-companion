@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AddDeviceSheet } from "@/components/AddDeviceSheet";
 import { MyDevicesList } from "@/components/MyDevicesList";
 import { MyRewards } from "@/components/MyRewards";
+import { ManageRewards } from "@/components/ManageRewards";
 
 const Index = () => {
   const { user, loading, signIn, signUp, signOut } = useAuth();
@@ -102,12 +103,7 @@ const Index = () => {
                 
                 <MyRewards />
                 
-                <Button 
-                  variant="outline"
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
-                >
-                  ⚙️ Manage My Rewards
-                </Button>
+                <ManageRewards />
               </div>
               
               <div className="pt-4 border-t border-white/20">

@@ -136,6 +136,54 @@ export type Database = {
           },
         ]
       }
+      user_payment_preferences: {
+        Row: {
+          account_number: string | null
+          bank_address: string | null
+          bank_name: string | null
+          created_at: string
+          iban: string | null
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          routing_number: string | null
+          sort_code: string | null
+          swift_code: string | null
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          bank_address?: string | null
+          bank_name?: string | null
+          created_at?: string
+          iban?: string | null
+          id?: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          routing_number?: string | null
+          sort_code?: string | null
+          swift_code?: string | null
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          bank_address?: string | null
+          bank_name?: string | null
+          created_at?: string
+          iban?: string | null
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          routing_number?: string | null
+          sort_code?: string | null
+          swift_code?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       device_reward_summary: {
@@ -165,7 +213,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      payment_method: "fiat" | "usdc_solana"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -280,6 +328,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      payment_method: ["fiat", "usdc_solana"],
+    },
   },
 } as const
