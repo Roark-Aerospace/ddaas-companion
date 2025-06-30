@@ -5,15 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { AddDeviceSheet } from "@/components/AddDeviceSheet";
+import { MyDevicesList } from "@/components/MyDevicesList";
 
 const Index = () => {
+  const { user, loading, signIn, signUp, signOut } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
@@ -43,26 +46,29 @@ const Index = () => {
       return;
     }
 
-    // Simulate authentication
-    setIsLoggedIn(true);
-    toast({
-      title: "Success",
-      description: isLogin ? "Logged in successfully!" : "Account created successfully!",
-    });
+    if (isLogin) {
+      await signIn(email, password);
+    } else {
+      await signUp(email, password);
+    }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut();
     setEmail("");
     setPassword("");
     setConfirmPassword("");
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully",
-    });
   };
 
-  if (isLoggedIn) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8">
@@ -75,7 +81,7 @@ const Index = () => {
             />
             <h1 className="text-3xl font-bold text-white mb-2">Roark Aerospace</h1>
             <p className="text-xl text-slate-300 mb-4">DDaaS Host Companion</p>
-            <p className="text-slate-400">Welcome back, {email}!</p>
+            <p className="text-slate-400">Welcome back, {user.email}!</p>
           </div>
 
           {/* Dashboard Card */}
@@ -88,19 +94,9 @@ const Index = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-3">
-                <Button 
-                  variant="outline"
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
-                >
-                  📱 My DDaaS Devices
-                </Button>
+                <MyDevicesList />
                 
-                <Button 
-                  variant="outline"
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
-                >
-                  ➕ Add a DDaaS Device
-                </Button>
+                <AddDeviceSheet />
                 
                 <Button 
                   variant="outline"

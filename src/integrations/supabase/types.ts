@@ -9,7 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ddaas_devices: {
+        Row: {
+          added_at: string
+          device_name: string | null
+          id: string
+          last_seen: string | null
+          latitude: number | null
+          location_accuracy: number | null
+          longitude: number | null
+          mac_address: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          device_name?: string | null
+          id?: string
+          last_seen?: string | null
+          latitude?: number | null
+          location_accuracy?: number | null
+          longitude?: number | null
+          mac_address: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          device_name?: string | null
+          id?: string
+          last_seen?: string | null
+          latitude?: number | null
+          location_accuracy?: number | null
+          longitude?: number | null
+          mac_address?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
