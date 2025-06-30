@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Gift, TrendingUp, Calendar, DollarSign } from 'lucide-react';
+import { Gift, TrendingUp, Calendar, DollarSign, Router } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 interface DeviceRewardSummary {
@@ -79,9 +79,9 @@ export const MyRewards = () => {
       </SheetTrigger>
       <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20">
         <SheetHeader>
-          <SheetTitle className="text-white">My Rewards</SheetTitle>
+          <SheetTitle className="text-white">My Rewards by Device</SheetTitle>
           <SheetDescription className="text-slate-300">
-            View rewards earned from your DDaaS devices
+            Rewards breakdown for each device MAC address
           </SheetDescription>
         </SheetHeader>
 
@@ -140,19 +140,28 @@ export const MyRewards = () => {
             </div>
           ) : (
             <div className="space-y-4">
+              <div className="text-sm text-slate-300 mb-4">
+                {rewardSummaries.length} device{rewardSummaries.length !== 1 ? 's' : ''} earning rewards
+              </div>
+              
               {rewardSummaries.map((device) => (
                 <Card key={device.device_id} className="bg-white/10 backdrop-blur-lg border-white/20">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-white text-base">
-                          {device.device_name || 'Unknown Device'}
-                        </CardTitle>
-                        <CardDescription className="text-slate-300 text-sm">
-                          {device.mac_address}
-                        </CardDescription>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Router className="w-4 h-4 text-slate-400" />
+                          <CardTitle className="text-white text-base">
+                            {device.device_name || 'Unknown Device'}
+                          </CardTitle>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-slate-800/50 text-slate-300 border-slate-600 font-mono text-xs">
+                            MAC: {device.mac_address}
+                          </Badge>
+                        </div>
                       </div>
-                      <Badge className="bg-green-600/80 text-white">
+                      <Badge className="bg-green-600/80 text-white ml-2">
                         {formatCurrency(device.total_rewards)}
                       </Badge>
                     </div>
@@ -193,7 +202,7 @@ export const MyRewards = () => {
                     <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/10">
                       <div className="flex items-center">
                         <DollarSign className="w-3 h-3 mr-1" />
-                        <span>{device.total_reward_entries} rewards</span>
+                        <span>{device.total_reward_entries} reward entries</span>
                       </div>
                       <div>
                         Last: {formatDate(device.last_reward_date)}
