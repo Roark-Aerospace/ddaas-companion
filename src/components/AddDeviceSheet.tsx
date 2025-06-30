@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { Geolocation } from '@capacitor/geolocation';
+import { Wifi } from '@capawesome/capacitor-wifi';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Wifi, MapPin, Plus } from 'lucide-react';
+import { Loader2, Wifi as WifiIcon, MapPin, Plus } from 'lucide-react';
 
 interface WiFiDevice {
-  BSSID: string;
-  SSID: string;
+  bssid: string;
+  ssid: string;
   level: number;
 }
 
@@ -20,12 +21,6 @@ interface LocationData {
   latitude: number;
   longitude: number;
   accuracy: number;
-}
-
-declare global {
-  interface Window {
-    Capacitor?: any;
-  }
 }
 
 export const AddDeviceSheet = () => {
@@ -41,15 +36,49 @@ export const AddDeviceSheet = () => {
   const scanWifiDevices = async () => {
     setIsScanning(true);
     try {
-      // For web/development, we'll simulate WiFi scanning
-      if (typeof navigator !== 'undefined' && !window.Capacitor) {
-        // Simulate WiFi devices for web testing
+      // Check if we're on a mobile device with Capacitor
+      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+        console.log('Scanning for WiFi networks using Capacitor WiFi plugin...');
+        
+        // Request permissions first
+        const permissionResult = await Wifi.requestPermissions();
+        console.log('WiFi permission result:', permissionResult);
+
+        if (permissionResult.location !== 'granted') {
+          toast({
+            title: "Permission Required",
+            description: "Location permission is required to scan for WiFi networks.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Scan for WiFi networks
+        const result = await Wifi.scan();
+        console.log('WiFi scan result:', result);
+
+        const devices: WiFiDevice[] = result.networks.map((network: any) => ({
+          bssid: network.bssid,
+          ssid: network.ssid || 'Hidden Network',
+          level: network.level
+        }));
+
+        setWifiDevices(devices);
+        
+        toast({
+          title: "WiFi Scan Complete",
+          description: `Found ${devices.length} devices`,
+        });
+      } else {
+        // For web/development, use mock data with a note
+        console.log('Running in web mode - using mock WiFi data');
+        
         const mockDevices: WiFiDevice[] = [
-          { BSSID: "00:11:22:33:44:55", SSID: "Home_Router", level: -45 },
-          { BSSID: "AA:BB:CC:DD:EE:FF", SSID: "Office_WiFi", level: -60 },
-          { BSSID: "12:34:56:78:90:AB", SSID: "Neighbor_WiFi", level: -75 },
-          { BSSID: "FF:EE:DD:CC:BB:AA", SSID: "Smart_TV", level: -50 },
-          { BSSID: "11:22:33:44:55:66", SSID: "IoT_Device", level: -65 },
+          { bssid: "00:11:22:33:44:55", ssid: "Home_Router", level: -45 },
+          { bssid: "AA:BB:CC:DD:EE:FF", ssid: "Office_WiFi", level: -60 },
+          { bssid: "12:34:56:78:90:AB", ssid: "Neighbor_WiFi", level: -75 },
+          { bssid: "FF:EE:DD:CC:BB:AA", ssid: "Smart_TV", level: -50 },
+          { bssid: "11:22:33:44:55:66", ssid: "IoT_Device", level: -65 },
         ];
         
         // Simulate scanning delay
@@ -57,30 +86,15 @@ export const AddDeviceSheet = () => {
         setWifiDevices(mockDevices);
         
         toast({
-          title: "WiFi Scan Complete",
-          description: `Found ${mockDevices.length} devices`,
-        });
-      } else {
-        // For mobile devices with Capacitor, we'll use a placeholder approach
-        // In a real implementation, you would use a proper WiFi scanning plugin
-        const mockDevices: WiFiDevice[] = [
-          { BSSID: "00:11:22:33:44:55", SSID: "Mobile_Router", level: -45 },
-          { BSSID: "AA:BB:CC:DD:EE:FF", SSID: "Mobile_WiFi", level: -60 },
-        ];
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setWifiDevices(mockDevices);
-        
-        toast({
-          title: "WiFi Scan Complete",
-          description: `Found ${mockDevices.length} devices`,
+          title: "WiFi Scan Complete (Mock Data)",
+          description: `Found ${mockDevices.length} mock devices. Real scanning works on mobile devices.`,
         });
       }
     } catch (error) {
       console.error('WiFi scanning error:', error);
       toast({
         title: "WiFi Scan Failed",
-        description: "Unable to scan for WiFi devices. Make sure WiFi is enabled.",
+        description: "Unable to scan for WiFi devices. Make sure WiFi is enabled and permissions are granted.",
         variant: "destructive",
       });
     } finally {
@@ -91,7 +105,26 @@ export const AddDeviceSheet = () => {
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
     try {
-      if (typeof navigator !== 'undefined' && !window.Capacitor) {
+      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+        // For mobile devices with Capacitor
+        const coordinates = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+        
+        const locationData: LocationData = {
+          latitude: coordinates.coords.latitude,
+          longitude: coordinates.coords.longitude,
+          accuracy: coordinates.coords.accuracy
+        };
+        
+        setLocation(locationData);
+        
+        toast({
+          title: "Location Found",
+          description: `Coordinates: ${locationData.latitude.toFixed(6)}, ${locationData.longitude.toFixed(6)}`,
+        });
+      } else {
         // For web/development, use browser geolocation
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -105,25 +138,6 @@ export const AddDeviceSheet = () => {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy
-        };
-        
-        setLocation(locationData);
-        
-        toast({
-          title: "Location Found",
-          description: `Coordinates: ${locationData.latitude.toFixed(6)}, ${locationData.longitude.toFixed(6)}`,
-        });
-      } else {
-        // For mobile devices with Capacitor
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        const locationData: LocationData = {
-          latitude: coordinates.coords.latitude,
-          longitude: coordinates.coords.longitude,
-          accuracy: coordinates.coords.accuracy
         };
         
         setLocation(locationData);
@@ -172,8 +186,8 @@ export const AddDeviceSheet = () => {
         .from('ddaas_devices')
         .insert({
           user_id: user.id,
-          mac_address: selectedDevice.BSSID,
-          device_name: deviceName || selectedDevice.SSID || 'Unknown Device',
+          mac_address: selectedDevice.bssid,
+          device_name: deviceName || selectedDevice.ssid || 'Unknown Device',
           latitude: location.latitude,
           longitude: location.longitude,
           location_accuracy: location.accuracy,
@@ -228,7 +242,7 @@ export const AddDeviceSheet = () => {
           <Card className="bg-white/10 backdrop-blur-lg border-white/20">
             <CardHeader>
               <CardTitle className="text-white flex items-center">
-                <Wifi className="w-5 h-5 mr-2" />
+                <WifiIcon className="w-5 h-5 mr-2" />
                 Step 1: Scan WiFi Network
               </CardTitle>
               <CardDescription className="text-slate-300">
@@ -248,7 +262,7 @@ export const AddDeviceSheet = () => {
                   </>
                 ) : (
                   <>
-                    <Wifi className="w-4 h-4 mr-2" />
+                    <WifiIcon className="w-4 h-4 mr-2" />
                     Scan WiFi Devices
                   </>
                 )}
@@ -262,7 +276,7 @@ export const AddDeviceSheet = () => {
                       <Card 
                         key={index}
                         className={`cursor-pointer transition-colors ${
-                          selectedDevice?.BSSID === device.BSSID 
+                          selectedDevice?.bssid === device.bssid 
                             ? 'bg-white/30 border-white/50' 
                             : 'bg-white/10 border-white/20 hover:bg-white/20'
                         }`}
@@ -270,8 +284,8 @@ export const AddDeviceSheet = () => {
                       >
                         <CardContent className="p-3">
                           <div className="text-sm">
-                            <div className="font-medium text-white">{device.SSID || 'Hidden Network'}</div>
-                            <div className="text-slate-300">MAC: {device.BSSID}</div>
+                            <div className="font-medium text-white">{device.ssid || 'Hidden Network'}</div>
+                            <div className="text-slate-300">MAC: {device.bssid}</div>
                             <div className="text-slate-400">Signal: {device.level} dBm</div>
                           </div>
                         </CardContent>
@@ -339,7 +353,7 @@ export const AddDeviceSheet = () => {
                   <Label htmlFor="deviceName" className="text-white">Device Name (Optional)</Label>
                   <Input
                     id="deviceName"
-                    placeholder={selectedDevice.SSID || 'Enter device name'}
+                    placeholder={selectedDevice.ssid || 'Enter device name'}
                     value={deviceName}
                     onChange={(e) => setDeviceName(e.target.value)}
                     className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
