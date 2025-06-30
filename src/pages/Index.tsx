@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AddDeviceSheet } from "@/components/AddDeviceSheet";
 import { MyDevicesList } from "@/components/MyDevicesList";
+import { MyRewards } from "@/components/MyRewards";
 
 const Index = () => {
   const { user, loading, signIn, signUp, signOut } = useAuth();
@@ -100,12 +100,7 @@ const Index = () => {
                 
                 <AddDeviceSheet />
                 
-                <Button 
-                  variant="outline"
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
-                >
-                  🎁 My Rewards
-                </Button>
+                <MyRewards />
                 
                 <Button 
                   variant="outline"

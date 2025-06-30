@@ -92,9 +92,74 @@ export type Database = {
           },
         ]
       }
+      device_rewards: {
+        Row: {
+          device_id: string
+          earned_at: string
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          reward_amount: number
+          reward_type: string
+          user_id: string
+        }
+        Insert: {
+          device_id: string
+          earned_at?: string
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          reward_amount?: number
+          reward_type?: string
+          user_id: string
+        }
+        Update: {
+          device_id?: string
+          earned_at?: string
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          reward_amount?: number
+          reward_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_rewards_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "ddaas_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      device_reward_summary: {
+        Row: {
+          device_id: string | null
+          device_name: string | null
+          last_reward_date: string | null
+          mac_address: string | null
+          rewards_30_days: number | null
+          rewards_7_days: number | null
+          total_reward_entries: number | null
+          total_rewards: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_rewards_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "ddaas_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
