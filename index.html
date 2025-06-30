@@ -3,22 +3,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mobile App</title>
-    <meta name="description" content="Lovable Generated Mobile App" />
-    <meta name="author" content="Lovable" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Roark Aerospace DDaaS</title>
+    <meta name="description" content="Roark Aerospace DDaaS Host Companion App" />
+    <meta name="author" content="Roark Aerospace" />
     
     <!-- App Icon as Favicon -->
     <link rel="icon" href="/lovable-uploads/e5e82c4c-0d70-4723-843b-9147d156804a.png" type="image/png">
 
-    <meta property="og:title" content="Mobile App" />
-    <meta property="og:description" content="Lovable Generated Mobile App" />
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e293b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Roark Aerospace" />
+    
+    <!-- iOS Splash Screen -->
+    <link rel="apple-touch-icon" href="/lovable-uploads/e5e82c4c-0d70-4723-843b-9147d156804a.png" />
+
+    <meta property="og:title" content="Roark Aerospace DDaaS" />
+    <meta property="og:description" content="DDaaS Host Companion Mobile App" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/lovable-uploads/e5e82c4c-0d70-4723-843b-9147d156804a.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
+    <meta name="twitter:site" content="@roark_aerospace" />
     <meta name="twitter:image" content="/lovable-uploads/e5e82c4c-0d70-4723-843b-9147d156804a.png" />
+    
+    <style>
+      /* Prevent zoom on input focus (iOS) */
+      input[type="email"],
+      input[type="password"],
+      input[type="text"],
+      textarea {
+        font-size: 16px !important;
+      }
+      
+      /* Safe area insets for iPhone X+ */
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+    </style>
   </head>
 
   <body>

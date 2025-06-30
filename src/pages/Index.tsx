@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,7 +66,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center px-4">
         <div className="text-white text-lg">Loading...</div>
       </div>
     );
@@ -73,29 +74,29 @@ const Index = () => {
 
   if (user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center px-4 py-6">
+        <div className="w-full max-w-sm space-y-6">
           {/* App Logo */}
           <div className="text-center">
             <img 
               src="/lovable-uploads/e5e82c4c-0d70-4723-843b-9147d156804a.png" 
               alt="Roark Aerospace Logo" 
-              className="w-24 h-24 mx-auto mb-6 rounded-2xl shadow-lg"
+              className="w-20 h-20 mx-auto mb-4 rounded-2xl shadow-lg"
             />
-            <h1 className="text-3xl font-bold text-white mb-2">Roark Aerospace</h1>
-            <p className="text-xl text-slate-300 mb-4">DDaaS Host Companion</p>
-            <p className="text-slate-400">Welcome back, {user.email}!</p>
+            <h1 className="text-2xl font-bold text-white mb-2">Roark Aerospace</h1>
+            <p className="text-lg text-slate-300 mb-3">DDaaS Host Companion</p>
+            <p className="text-slate-400 text-sm truncate">Welcome back, {user.email}!</p>
           </div>
 
           {/* Dashboard Card */}
           <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white">Dashboard</CardTitle>
-              <CardDescription className="text-slate-300">
-                Your DDaaS Host Companion dashboard
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white text-lg">Dashboard</CardTitle>
+              <CardDescription className="text-slate-300 text-sm">
+                Your DDaaS Host Companion
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="grid grid-cols-1 gap-3">
                 <MyDevicesList />
                 
@@ -110,7 +111,7 @@ const Index = () => {
                 <Button 
                   onClick={handleLogout}
                   variant="outline"
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  className="w-full h-12 bg-white/20 hover:bg-white/30 text-white border-white/30 text-base"
                 >
                   Logout
                 </Button>
@@ -123,67 +124,67 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 flex items-center justify-center px-4 py-6">
+      <div className="w-full max-w-sm space-y-6">
         {/* App Logo */}
         <div className="text-center">
           <img 
             src="/lovable-uploads/e5e82c4c-0d70-4723-843b-9147d156804a.png" 
             alt="Roark Aerospace Logo" 
-            className="w-24 h-24 mx-auto mb-6 rounded-2xl shadow-lg"
+            className="w-20 h-20 mx-auto mb-4 rounded-2xl shadow-lg"
           />
-          <h1 className="text-3xl font-bold text-white mb-2">Roark Aerospace</h1>
-          <p className="text-xl text-slate-300">DDaaS Host Companion</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Roark Aerospace</h1>
+          <p className="text-lg text-slate-300">DDaaS Host Companion</p>
         </div>
 
         {/* Login/Register Form */}
         <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-          <CardHeader>
-            <CardTitle className="text-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-white text-lg">
               {isLogin ? "Welcome Back" : "Create Account"}
             </CardTitle>
-            <CardDescription className="text-slate-300">
+            <CardDescription className="text-slate-300 text-sm">
               {isLogin ? "Sign in to your account" : "Register for a new account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">Email</Label>
+                <Label htmlFor="email" className="text-white text-sm">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                  className="h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 text-base"
                   required
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">Password</Label>
+                <Label htmlFor="password" className="text-white text-sm">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                  className="h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 text-base"
                   required
                 />
               </div>
 
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword" className="text-white text-sm">Confirm Password</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                    className="h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 text-base"
                     required
                   />
                 </div>
@@ -191,7 +192,7 @@ const Index = () => {
 
               <Button 
                 type="submit"
-                className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                className="w-full h-12 bg-white/20 hover:bg-white/30 text-white border-white/30 text-base"
               >
                 {isLogin ? "Sign In" : "Create Account"}
               </Button>
@@ -206,7 +207,7 @@ const Index = () => {
                   setPassword("");
                   setConfirmPassword("");
                 }}
-                className="text-slate-300 hover:text-white underline text-sm"
+                className="text-slate-300 hover:text-white underline text-sm min-h-[44px] flex items-center justify-center w-full"
               >
                 {isLogin ? "Need an account? Register here" : "Already have an account? Sign in"}
               </button>
@@ -215,16 +216,18 @@ const Index = () => {
         </Card>
 
         {/* Instructions */}
-        <div className="text-center text-sm text-slate-400 space-y-2">
+        <div className="text-center text-xs text-slate-400 space-y-2">
           <p>Mobile App Ready for iOS and Android</p>
-          <ol className="text-left space-y-1 bg-black/20 p-4 rounded-lg">
-            <li>1. Export to GitHub</li>
-            <li>2. Run: npm install</li>
-            <li>3. Run: npx cap add ios/android</li>
-            <li>4. Run: npm run build</li>
-            <li>5. Run: npx cap sync</li>
-            <li>6. Run: npx cap run ios/android</li>
-          </ol>
+          <div className="text-left bg-black/20 p-3 rounded-lg">
+            <ol className="space-y-1 text-xs leading-relaxed">
+              <li>1. Export to GitHub</li>
+              <li>2. Run: npm install</li>
+              <li>3. Run: npx cap add ios/android</li>
+              <li>4. Run: npm run build</li>
+              <li>5. Run: npx cap sync</li>
+              <li>6. Run: npx cap run ios/android</li>
+            </ol>
+          </div>
         </div>
       </div>
     </div>
