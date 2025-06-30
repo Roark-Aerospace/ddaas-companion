@@ -87,24 +87,45 @@ const Index = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-2xl mb-2">🚀</div>
-                  <div className="text-sm text-white">Systems Online</div>
-                </div>
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-2xl mb-2">📡</div>
-                  <div className="text-sm text-white">Connected</div>
-                </div>
+              <div className="grid grid-cols-1 gap-3">
+                <Button 
+                  variant="outline"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
+                >
+                  📱 My DDaaS Devices
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
+                >
+                  ➕ Add a DDaaS Device
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
+                >
+                  🎁 My Rewards
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 justify-start"
+                >
+                  ⚙️ Manage My Rewards
+                </Button>
               </div>
               
-              <Button 
-                onClick={handleLogout}
-                variant="outline"
-                className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                Logout
-              </Button>
+              <div className="pt-4 border-t border-white/20">
+                <Button 
+                  onClick={handleLogout}
+                  variant="outline"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  Logout
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
