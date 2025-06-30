@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Smartphone, MapPin, Clock, Trash2 } from 'lucide-react';
+import { Smartphone, MapPin, Clock, Trash2, Wifi, Activity, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface DDaaSDevice {
@@ -16,12 +16,17 @@ interface DDaaSDevice {
   latitude: number | null;
   longitude: number | null;
   location_accuracy: number | null;
+  ip_address: string | null;
+  status: string | null;
+  last_ping_at: string | null;
+  ping_response_time: number | null;
   added_at: string;
   last_seen: string | null;
 }
 
 export const MyDevicesList = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [pingingDevices, setPingingDevices] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   const { data: devices, isLoading, error } = useQuery({
@@ -38,6 +43,43 @@ export const MyDevicesList = () => {
     enabled: isOpen,
   });
 
+  // Set up real-time subscription for device status updates
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const channel = supabase
+      .channel('device-status-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public', 
+          table: 'ddaas_devices'
+        },
+        (payload) => {
+          console.log('Device status updated:', payload);
+          queryClient.invalidateQueries({ queryKey: ['ddaas-devices'] });
+          
+          // Show toast for status changes
+          const newStatus = payload.new.status;
+          const deviceName = payload.new.device_name || 'Device';
+          
+          if (newStatus === 'offline') {
+            toast({
+              title: "Device Offline",
+              description: `${deviceName} is not responding to ping`,
+              variant: "destructive",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, queryClient]);
+
   const deleteDevice = async (deviceId: string) => {
     try {
       const { error } = await supabase
@@ -52,7 +94,6 @@ export const MyDevicesList = () => {
         description: "DDaaS device has been successfully removed.",
       });
 
-      // Refresh the devices list
       queryClient.invalidateQueries({ queryKey: ['ddaas-devices'] });
     } catch (error) {
       console.error('Delete device error:', error);
@@ -60,6 +101,41 @@ export const MyDevicesList = () => {
         title: "Delete Failed",
         description: "Failed to remove device. Please try again.",
         variant: "destructive",
+      });
+    }
+  };
+
+  const pingDevice = async (deviceId: string) => {
+    setPingingDevices(prev => new Set([...prev, deviceId]));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('monitor-devices', {
+        body: { deviceId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Ping Complete",
+        description: data.pingResult.success 
+          ? `Device responded in ${data.pingResult.responseTime}ms`
+          : `Device unreachable: ${data.pingResult.error}`,
+        variant: data.pingResult.success ? "default" : "destructive",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['ddaas-devices'] });
+    } catch (error) {
+      console.error('Ping device error:', error);
+      toast({
+        title: "Ping Failed",
+        description: "Failed to ping device. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPingingDevices(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(deviceId);
+        return newSet;
       });
     }
   };
@@ -79,6 +155,28 @@ export const MyDevicesList = () => {
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   };
 
+  const getStatusIcon = (status: string | null) => {
+    switch (status) {
+      case 'online':
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
+      case 'offline':
+        return <AlertCircle className="w-4 h-4 text-red-400" />;
+      default:
+        return <Activity className="w-4 h-4 text-yellow-400" />;
+    }
+  };
+
+  const getStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'online':
+        return 'bg-green-600/80 text-white';
+      case 'offline':
+        return 'bg-red-600/80 text-white';
+      default:
+        return 'bg-yellow-600/80 text-white';
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
@@ -94,7 +192,7 @@ export const MyDevicesList = () => {
         <SheetHeader>
           <SheetTitle className="text-white">My DDaaS Devices</SheetTitle>
           <SheetDescription className="text-slate-300">
-            Manage your registered DDaaS devices
+            Monitor and manage your registered DDaaS devices
           </SheetDescription>
         </SheetHeader>
 
@@ -125,37 +223,86 @@ export const MyDevicesList = () => {
                         <CardTitle className="text-white flex items-center">
                           <Smartphone className="w-5 h-5 mr-2" />
                           {device.device_name || 'Unknown Device'}
+                          <div className="ml-2 flex items-center">
+                            {getStatusIcon(device.status)}
+                          </div>
                         </CardTitle>
                         <CardDescription className="text-slate-300">
                           MAC: {device.mac_address}
                         </CardDescription>
+                        {device.ip_address && (
+                          <div className="flex items-center mt-1">
+                            <Wifi className="w-4 h-4 mr-1 text-blue-400" />
+                            <span className="text-sm text-blue-300">{device.ip_address}</span>
+                          </div>
+                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteDevice(device.id)}
-                        className="text-red-300 hover:text-red-200 hover:bg-red-900/20"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        {device.ip_address && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => pingDevice(device.id)}
+                            disabled={pingingDevices.has(device.id)}
+                            className="text-blue-300 hover:text-blue-200 hover:bg-blue-900/20"
+                          >
+                            {pingingDevices.has(device.id) ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Activity className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteDevice(device.id)}
+                          className="text-red-300 hover:text-red-200 hover:bg-red-900/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex items-center text-sm text-slate-300">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      <span>{formatCoordinates(device.latitude, device.longitude)}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-slate-300">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        <span>{formatCoordinates(device.latitude, device.longitude)}</span>
+                      </div>
                       {device.location_accuracy && (
-                        <Badge variant="secondary" className="ml-2 bg-white/20 text-white">
+                        <Badge variant="secondary" className="bg-white/20 text-white">
                           ±{device.location_accuracy.toFixed(1)}m
                         </Badge>
                       )}
                     </div>
-                    
-                    <div className="flex items-center text-sm text-slate-400">
-                      <Clock className="w-4 h-4 mr-2" />
-                      <span>Added: {formatDate(device.added_at)}</span>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-slate-400">
+                        <Clock className="w-4 h-4 mr-2" />
+                        <span>Added: {formatDate(device.added_at)}</span>
+                      </div>
+                      {device.status && (
+                        <Badge className={getStatusColor(device.status)}>
+                          {device.status.charAt(0).toUpperCase() + device.status.slice(1)}
+                        </Badge>
+                      )}
                     </div>
                     
+                    {device.last_ping_at && (
+                      <div className="flex items-center justify-between text-sm text-slate-400">
+                        <div className="flex items-center">
+                          <Activity className="w-4 h-4 mr-2" />
+                          <span>Last ping: {formatDate(device.last_ping_at)}</span>
+                        </div>
+                        {device.ping_response_time && (
+                          <Badge variant="outline" className="border-slate-500 text-slate-300">
+                            {device.ping_response_time}ms
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
                     {device.last_seen && (
                       <div className="flex items-center text-sm text-slate-400">
                         <Clock className="w-4 h-4 mr-2" />

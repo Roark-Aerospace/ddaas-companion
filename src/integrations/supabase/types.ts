@@ -14,36 +14,83 @@ export type Database = {
           added_at: string
           device_name: string | null
           id: string
+          ip_address: unknown | null
+          last_ping_at: string | null
           last_seen: string | null
           latitude: number | null
           location_accuracy: number | null
           longitude: number | null
           mac_address: string
+          ping_response_time: number | null
+          status: string | null
           user_id: string
         }
         Insert: {
           added_at?: string
           device_name?: string | null
           id?: string
+          ip_address?: unknown | null
+          last_ping_at?: string | null
           last_seen?: string | null
           latitude?: number | null
           location_accuracy?: number | null
           longitude?: number | null
           mac_address: string
+          ping_response_time?: number | null
+          status?: string | null
           user_id: string
         }
         Update: {
           added_at?: string
           device_name?: string | null
           id?: string
+          ip_address?: unknown | null
+          last_ping_at?: string | null
           last_seen?: string | null
           latitude?: number | null
           location_accuracy?: number | null
           longitude?: number | null
           mac_address?: string
+          ping_response_time?: number | null
+          status?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      device_ping_history: {
+        Row: {
+          device_id: string | null
+          error_message: string | null
+          id: string
+          ping_time: string
+          response_time: number | null
+          status: string
+        }
+        Insert: {
+          device_id?: string | null
+          error_message?: string | null
+          id?: string
+          ping_time?: string
+          response_time?: number | null
+          status: string
+        }
+        Update: {
+          device_id?: string | null
+          error_message?: string | null
+          id?: string
+          ping_time?: string
+          response_time?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_ping_history_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "ddaas_devices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

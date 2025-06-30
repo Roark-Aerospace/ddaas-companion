@@ -1,1 +1,20 @@
+
 project_id = "pwmndpdgkbtfyqabgvij"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54320
+external_url = "http://localhost:54321"
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+refresh_token_reuse_interval = 10
+
+[functions.monitor-devices]
+verify_jwt = false
