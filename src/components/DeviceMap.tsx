@@ -126,13 +126,15 @@ export const DeviceMap = () => {
         });
       });
 
-      // Throttled zoom event listener to reduce frequent updates
+      // Fixed zoom event listener with proper throttling
       let zoomTimeout: NodeJS.Timeout;
       map.current.on('zoom', () => {
         clearTimeout(zoomTimeout);
         zoomTimeout = setTimeout(() => {
-          updateMarkerSizes();
-        }, 100);
+          if (map.current && markers.length > 0) {
+            updateMarkerSizes();
+          }
+        }, 50); // Reduced timeout for more responsive scaling
       });
 
       map.current.on('sourcedata', (e) => {
@@ -156,20 +158,16 @@ export const DeviceMap = () => {
   };
 
   const getMarkerSize = (zoom: number, isMyDevice: boolean) => {
-    // Exponential scaling for better zoom differentiation
-    const minSize = 4;
-    const maxSize = 24;
+    // Fixed scaling with better visual progression
+    const minSize = 6;
+    const maxSize = 32;
     
-    // Clamp zoom between 0 and 18
-    const clampedZoom = Math.max(0, Math.min(18, zoom));
-    
-    // Use exponential curve: size = min + (max - min) * (zoom/18)^2
-    const normalizedZoom = clampedZoom / 18;
-    const exponentialFactor = Math.pow(normalizedZoom, 1.5); // Adjust curve steepness
-    const size = minSize + (maxSize - minSize) * exponentialFactor;
+    // Linear scaling with better zoom range
+    const normalizedZoom = Math.max(0, Math.min(zoom, 20)) / 20;
+    const size = minSize + (maxSize - minSize) * normalizedZoom;
     
     // Add extra size for user's own devices
-    const finalSize = isMyDevice ? size * 1.2 : size;
+    const finalSize = isMyDevice ? size * 1.3 : size;
     
     return Math.round(Math.max(minSize, finalSize));
   };
@@ -182,13 +180,17 @@ export const DeviceMap = () => {
     
     markers.forEach((marker) => {
       const markerElement = marker.getElement();
-      const isMyDevice = markerElement.dataset.isMyDevice === 'true';
+      if (!markerElement) return;
       
+      const isMyDevice = markerElement.dataset.isMyDevice === 'true';
       const newSize = getMarkerSize(currentZoom, isMyDevice);
       
-      // Update size while maintaining center positioning
+      // Force update size with proper CSS
       markerElement.style.width = `${newSize}px`;
       markerElement.style.height = `${newSize}px`;
+      markerElement.style.transform = 'translate(-50%, -50%)'; // Keep centered
+      
+      console.log(`Updated marker size to ${newSize}px for zoom ${currentZoom}`);
     });
   };
 
@@ -247,7 +249,7 @@ export const DeviceMap = () => {
       const deviceReward = rewards?.find(r => r.device_id === device.id);
       const isMyDevice = user?.id === device.user_id;
 
-      // Create simple marker element with center anchoring
+      // Create marker element with fixed positioning
       const markerElement = document.createElement('div');
       const markerSize = getMarkerSize(currentZoom, isMyDevice);
       
@@ -256,75 +258,80 @@ export const DeviceMap = () => {
         width: ${markerSize}px;
         height: ${markerSize}px;
         border-radius: 50%;
-        border: 2px solid ${isMyDevice ? '#a855f7' : 'white'};
+        border: 3px solid ${isMyDevice ? '#a855f7' : 'white'};
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 3px 12px rgba(0,0,0,0.4);
         background-color: ${getStatusColor(device.status)};
+        position: absolute;
         transform: translate(-50%, -50%);
+        z-index: 1;
       `;
 
-      // Create popup content with better responsive design
+      // Improved popup content with better responsive design and overflow handling
       const popupContent = `
         <div style="
-          padding: 8px; 
+          padding: 12px; 
           background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); 
-          border-radius: 6px; 
+          border-radius: 8px; 
           color: white; 
-          width: ${isMobile ? '250px' : '280px'};
-          max-width: 90vw;
-          font-family: system-ui;
-          font-size: 11px;
-          line-height: 1.3;
+          width: ${isMobile ? '280px' : '320px'};
+          max-width: calc(100vw - 40px);
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
+          line-height: 1.4;
           box-sizing: border-box;
+          overflow: hidden;
+          word-wrap: break-word;
         ">
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px;">
-            <h3 style="margin: 0; font-size: 13px; font-weight: bold; word-break: break-word; flex: 1; min-width: 0;">${device.device_name || 'Unknown Device'}</h3>
-            ${isMyDevice ? `<span style="background: #a855f7; padding: 2px 4px; border-radius: 3px; font-size: 9px; font-weight: bold; white-space: nowrap;">MY DEVICE</span>` : ''}
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; gap: 10px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600; word-break: break-word; flex: 1; min-width: 0;">${device.device_name || 'Unknown Device'}</h3>
+            ${isMyDevice ? `<span style="background: #a855f7; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">MY DEVICE</span>` : ''}
           </div>
           
-          <div style="margin-bottom: 6px;">
-            <p style="margin: 1px 0; word-break: break-all;"><strong>MAC:</strong> ${device.mac_address}</p>
-            ${device.ip_address ? `<p style="margin: 1px 0;"><strong>IP:</strong> ${device.ip_address}</p>` : ''}
-            <p style="margin: 1px 0;"><strong>Coords:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+          <div style="margin-bottom: 8px; font-size: 11px;">
+            <p style="margin: 2px 0; word-break: break-all;"><strong>MAC:</strong> ${device.mac_address}</p>
+            ${device.ip_address ? `<p style="margin: 2px 0;"><strong>IP:</strong> ${device.ip_address}</p>` : ''}
+            <p style="margin: 2px 0;"><strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
           </div>
           
-          <div style="margin: 6px 0; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 3px;">
-            <p style="margin: 1px 0;">
-              <strong>Status:</strong> <span style="color: ${getStatusTextColor(device.status)}; font-weight: bold;">${device.status || 'Unknown'}</span>
+          <div style="margin: 8px 0; padding: 6px; background: rgba(0,0,0,0.25); border-radius: 4px; font-size: 11px;">
+            <p style="margin: 2px 0;">
+              <strong>Status:</strong> <span style="color: ${getStatusTextColor(device.status)}; font-weight: 600;">${device.status || 'Unknown'}</span>
             </p>
-            <p style="margin: 1px 0; font-size: 10px; opacity: 0.8;">
+            <p style="margin: 2px 0; font-size: 10px; opacity: 0.9;">
               <strong>Added:</strong> ${formatDate(device.added_at)}
             </p>
-            <p style="margin: 1px 0; font-size: 10px; opacity: 0.8;">
+            <p style="margin: 2px 0; font-size: 10px; opacity: 0.9;">
               <strong>Last Seen:</strong> ${formatDate(device.last_seen)}
             </p>
           </div>
           
-          <div style="margin: 6px 0; padding: 4px; background: rgba(16, 185, 129, 0.1); border-radius: 3px; border-left: 2px solid #10b981;">
-            <p style="margin: 1px 0; color: #86efac; font-size: 10px;">
+          <div style="margin: 8px 0; padding: 6px; background: rgba(16, 185, 129, 0.15); border-radius: 4px; border-left: 3px solid #10b981; font-size: 11px;">
+            <p style="margin: 2px 0; color: #86efac;">
               <strong>Total Rewards:</strong> ${deviceReward?.total_rewards ? formatCurrency(Number(deviceReward.total_rewards)) : '$0.00'}
             </p>
           </div>
           
-          ${device.manual_location_notes ? `<p style="margin: 4px 0 0 0; font-size: 10px; opacity: 0.7; font-style: italic;">${device.manual_location_notes}</p>` : ''}
+          ${device.manual_location_notes ? `<p style="margin: 6px 0 0 0; font-size: 10px; opacity: 0.8; font-style: italic; word-break: break-word;">${device.manual_location_notes}</p>` : ''}
           
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 9px; opacity: 0.6; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 10px; opacity: 0.7; gap: 10px;">
             <span style="flex-shrink: 0;">${device.manual_latitude ? 'Manual location' : 'Auto-detected'}</span>
-            ${isMyDevice ? `<button onclick="window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: 4px 8px; border-radius: 3px; color: white; cursor: pointer; font-size: 10px; white-space: nowrap;">View My Devices</button>` : ''}
+            ${isMyDevice ? `<button onclick="window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer; font-size: 10px; white-space: nowrap; flex-shrink: 0;">View My Devices</button>` : ''}
           </div>
         </div>
       `;
 
-      // Create popup with better positioning and offset
+      // Create popup with better positioning and responsive offset
       const popup = new mapboxgl.Popup({
-        offset: [0, -10],
+        offset: [0, -15],
         closeButton: true,
         closeOnClick: false,
         className: 'device-popup',
-        maxWidth: 'none'
+        maxWidth: 'none',
+        anchor: 'bottom'
       }).setHTML(popupContent);
 
-      // Create marker with center anchor to prevent shifting
+      // Create marker with center anchor (fixed positioning)
       const marker = new mapboxgl.Marker({
         element: markerElement,
         anchor: 'center'
@@ -334,14 +341,14 @@ export const DeviceMap = () => {
         .addTo(map.current!);
 
       newMarkers.push(marker);
-      console.log(`Added marker for device ${device.device_name} at ${lat}, ${lng}`);
+      console.log(`Added marker for device ${device.device_name} at ${lat}, ${lng} with size ${markerSize}px`);
     });
 
     setMarkers(newMarkers);
 
     // Fit map to show all devices
     if (hasValidCoordinates && devices.length <= 50) {
-      const padding = isMobile ? 30 : 50;
+      const padding = isMobile ? 40 : 60;
       try {
         map.current.fitBounds(bounds, { 
           padding,
