@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,20 @@ export const MyRewards = () => {
     queryFn: async () => {
       console.log('Fetching device reward summaries...');
       
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('Current user:', user);
+      
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw authError;
+      }
+      
+      if (!user) {
+        console.error('No authenticated user');
+        throw new Error('User not authenticated');
+      }
+      
       // First get all devices for the current user
       const { data: devices, error: devicesError } = await supabase
         .from('ddaas_devices')
@@ -43,11 +56,13 @@ export const MyRewards = () => {
       console.log('Devices fetched:', devices);
 
       if (!devices || devices.length === 0) {
+        console.log('No devices found for user');
         return [];
       }
 
       // Get device IDs
       const deviceIds = devices.map(d => d.id);
+      console.log('Device IDs:', deviceIds);
 
       // Get all rewards for these devices
       const { data: rewards, error: rewardsError } = await supabase
@@ -95,6 +110,7 @@ export const MyRewards = () => {
         };
       });
 
+      console.log('Final summaries:', summaries);
       // Sort by total rewards descending
       return summaries.sort((a, b) => b.total_rewards - a.total_rewards);
     },
@@ -147,6 +163,7 @@ export const MyRewards = () => {
           ) : error ? (
             <div className="text-center py-8">
               <div className="text-red-300">Failed to load rewards: {error.message}</div>
+              <div className="text-xs text-red-400 mt-2">Check console for more details</div>
             </div>
           ) : !rewardSummaries || rewardSummaries.length === 0 ? (
             <EmptyRewardsState />
