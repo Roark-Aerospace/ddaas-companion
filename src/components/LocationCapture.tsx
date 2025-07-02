@@ -3,13 +3,16 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
-import { Geolocation } from '@capacitor/geolocation';
-import { Loader2, MapPin, AlertTriangle } from 'lucide-react';
+import { Loader2, MapPin, AlertTriangle, Target } from 'lucide-react';
 
 export interface LocationData {
   latitude: number;
   longitude: number;
   accuracy: number;
+  altitude?: number | null;
+  altitudeAccuracy?: number | null;
+  heading?: number | null;
+  speed?: number | null;
 }
 
 interface LocationCaptureProps {
@@ -26,29 +29,26 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
     setLocationError(null);
     
     try {
-      // For web browsers, use the standard geolocation API directly
-      console.log('Using browser geolocation API');
+      console.log('Using browser geolocation API with high accuracy');
       
-      // Check if geolocation is supported
       if (!('geolocation' in navigator)) {
         throw new Error('Geolocation is not supported by this browser');
       }
 
-      // Request location directly
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         const options: PositionOptions = {
           enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 60000
+          timeout: 30000, // Increased timeout for better accuracy
+          maximumAge: 0 // Don't use cached location
         };
 
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            console.log('Browser geolocation success:', position);
+            console.log('High accuracy geolocation success:', position);
             resolve(position);
           },
           (error) => {
-            console.error('Browser geolocation error:', error);
+            console.error('High accuracy geolocation error:', error);
             reject(error);
           },
           options
@@ -58,46 +58,57 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
       const locationData: LocationData = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy
+        accuracy: position.coords.accuracy,
+        altitude: position.coords.altitude,
+        altitudeAccuracy: position.coords.altitudeAccuracy,
+        heading: position.coords.heading,
+        speed: position.coords.speed
       };
       
       onLocationFound(locationData);
       
+      const accuracyText = locationData.accuracy < 10 
+        ? "Very High" 
+        : locationData.accuracy < 50 
+        ? "High" 
+        : locationData.accuracy < 100 
+        ? "Medium" 
+        : "Low";
+      
       toast({
         title: "Location Found",
-        description: `Coordinates: ${locationData.latitude.toFixed(6)}, ${locationData.longitude.toFixed(6)}`,
+        description: `Accuracy: ${accuracyText} (±${locationData.accuracy.toFixed(1)}m). Coordinates: ${locationData.latitude.toFixed(6)}, ${locationData.longitude.toFixed(6)}`,
       });
 
     } catch (error: any) {
       console.error('Location error:', error);
       
-      // Handle specific geolocation error codes
-      if (error.code === 1) { // PERMISSION_DENIED
-        setLocationError('Location access denied. Please allow location access when prompted by your browser.');
+      if (error.code === 1) {
+        setLocationError('Location access denied. Please allow location access and ensure you\'re using HTTPS.');
         toast({
           title: "Location Permission Denied",
-          description: "Please allow location access when prompted by your browser.",
+          description: "Please allow location access when prompted. Note: High accuracy requires HTTPS.",
           variant: "destructive",
         });
-      } else if (error.code === 2) { // POSITION_UNAVAILABLE
-        setLocationError('Location services unavailable. Please check your device location settings.');
+      } else if (error.code === 2) {
+        setLocationError('Location services unavailable. Try moving to an area with better GPS signal.');
         toast({
           title: "Location Unavailable",
-          description: "Unable to determine your location. Please check your device location settings.",
+          description: "Unable to determine your location. Try moving outdoors for better GPS signal.",
           variant: "destructive",
         });
-      } else if (error.code === 3) { // TIMEOUT
-        setLocationError('Location request timed out. Please try again.');
+      } else if (error.code === 3) {
+        setLocationError('Location request timed out. This may happen when seeking high accuracy.');
         toast({
           title: "Location Request Timeout",
-          description: "Location request took too long. Please try again.",
+          description: "High accuracy location took too long. Try again or move to an area with better GPS signal.",
           variant: "destructive",
         });
       } else {
-        setLocationError('Unable to get location. Please check your browser settings and allow location access.');
+        setLocationError('Unable to get location. Ensure location services are enabled and you\'re using HTTPS.');
         toast({
           title: "Location Failed",
-          description: "Unable to get current location. Please check your browser settings.",
+          description: "Unable to get current location. Check your browser settings and location permissions.",
           variant: "destructive",
         });
       }
@@ -106,23 +117,29 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
     }
   };
 
-  const openLocationSettings = () => {
-    toast({
-      title: "Enable Location Access",
-      description: "Click 'Allow' when your browser asks for location permission, or check your browser's location settings.",
-      duration: 8000,
-    });
+  const getAccuracyColor = (accuracy: number) => {
+    if (accuracy < 10) return 'text-green-400';
+    if (accuracy < 50) return 'text-yellow-400';
+    if (accuracy < 100) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getAccuracyDescription = (accuracy: number) => {
+    if (accuracy < 10) return 'Very High (GPS)';
+    if (accuracy < 50) return 'High (GPS/WiFi)';
+    if (accuracy < 100) return 'Medium (Cell Tower)';
+    return 'Low (IP-based)';
   };
 
   return (
     <Card className="bg-white/10 backdrop-blur-lg border-white/20">
       <CardHeader>
         <CardTitle className="text-white flex items-center">
-          <MapPin className="w-5 h-5 mr-2" />
-          Step 2: Get Location
+          <Target className="w-5 h-5 mr-2" />
+          Step 2: Get High-Accuracy Location
         </CardTitle>
         <CardDescription className="text-slate-300">
-          Capture GPS coordinates for the device location
+          Capture precise GPS coordinates (works best outdoors with HTTPS)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -134,12 +151,12 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
           {isGettingLocation ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Getting Location...
+              Getting High-Accuracy Location...
             </>
           ) : (
             <>
-              <MapPin className="w-4 h-4 mr-2" />
-              Get Current Location
+              <Target className="w-4 h-4 mr-2" />
+              Get Precise Location
             </>
           )}
         </Button>
@@ -151,14 +168,15 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
                 <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-red-200 text-sm">{locationError}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={openLocationSettings}
-                    className="mt-2 text-red-300 hover:text-red-200 hover:bg-red-800/20 h-8 px-3"
-                  >
-                    Help Enable Location
-                  </Button>
+                  <div className="mt-2 text-xs text-red-300">
+                    <p>💡 Tips for better accuracy:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>Go outdoors with clear sky view</li>
+                      <li>Ensure site is loaded via HTTPS</li>
+                      <li>Allow location access when prompted</li>
+                      <li>Wait longer for GPS to acquire signal</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -166,14 +184,29 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
         )}
 
         {location && (
-          <div className="bg-white/10 p-3 rounded-lg">
+          <div className="bg-white/10 p-3 rounded-lg space-y-2">
             <div className="text-sm text-white">
-              <div>Latitude: {location.latitude.toFixed(6)}</div>
-              <div>Longitude: {location.longitude.toFixed(6)}</div>
-              <div>Accuracy: {location.accuracy.toFixed(1)}m</div>
+              <div>Latitude: {location.latitude.toFixed(8)}</div>
+              <div>Longitude: {location.longitude.toFixed(8)}</div>
+              <div className={`flex items-center ${getAccuracyColor(location.accuracy)}`}>
+                <Target className="w-4 h-4 mr-1" />
+                Accuracy: ±{location.accuracy.toFixed(1)}m ({getAccuracyDescription(location.accuracy)})
+              </div>
+              {location.altitude !== null && location.altitude !== undefined && (
+                <div>Altitude: {location.altitude.toFixed(1)}m</div>
+              )}
             </div>
+            {location.accuracy > 100 && (
+              <div className="text-xs text-yellow-300 bg-yellow-900/20 p-2 rounded">
+                ⚠️ Low accuracy detected. For better results, try going outdoors or ensuring GPS is enabled.
+              </div>
+            )}
           </div>
         )}
+
+        <div className="text-xs text-slate-400 bg-white/5 p-2 rounded">
+          <p><strong>Note:</strong> Best accuracy requires GPS and HTTPS. Indoor locations may be less precise.</p>
+        </div>
       </CardContent>
     </Card>
   );
