@@ -134,7 +134,7 @@ export const DeviceMap = () => {
           if (map.current && markers.length > 0) {
             updateMarkerSizes();
           }
-        }, 50); // Reduced timeout for more responsive scaling
+        }, 50);
       });
 
       map.current.on('sourcedata', (e) => {
@@ -158,16 +158,17 @@ export const DeviceMap = () => {
   };
 
   const getMarkerSize = (zoom: number, isMyDevice: boolean) => {
-    // Fixed scaling with better visual progression
-    const minSize = 6;
-    const maxSize = 32;
-    
     // Linear scaling with better zoom range
-    const normalizedZoom = Math.max(0, Math.min(zoom, 20)) / 20;
+    const minSize = 8;
+    const maxSize = 24;
+    
+    // Clamp zoom between 0 and 18 for consistent scaling
+    const clampedZoom = Math.max(0, Math.min(zoom, 18));
+    const normalizedZoom = clampedZoom / 18;
     const size = minSize + (maxSize - minSize) * normalizedZoom;
     
     // Add extra size for user's own devices
-    const finalSize = isMyDevice ? size * 1.3 : size;
+    const finalSize = isMyDevice ? size * 1.2 : size;
     
     return Math.round(Math.max(minSize, finalSize));
   };
@@ -249,7 +250,7 @@ export const DeviceMap = () => {
       const deviceReward = rewards?.find(r => r.device_id === device.id);
       const isMyDevice = user?.id === device.user_id;
 
-      // Create marker element with fixed positioning
+      // Create marker element with responsive sizing
       const markerElement = document.createElement('div');
       const markerSize = getMarkerSize(currentZoom, isMyDevice);
       
@@ -258,80 +259,101 @@ export const DeviceMap = () => {
         width: ${markerSize}px;
         height: ${markerSize}px;
         border-radius: 50%;
-        border: 3px solid ${isMyDevice ? '#a855f7' : 'white'};
+        border: 2px solid ${isMyDevice ? '#a855f7' : 'white'};
         cursor: pointer;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         background-color: ${getStatusColor(device.status)};
         position: absolute;
         transform: translate(-50%, -50%);
         z-index: 1;
       `;
 
-      // Improved popup content with better responsive design and overflow handling
+      // Dynamic popup content with zoom-aware sizing
+      const getPopupWidth = () => {
+        const zoom = map.current?.getZoom() || 2;
+        if (isMobile) return Math.min(280, window.innerWidth - 40);
+        return zoom > 10 ? 300 : zoom > 6 ? 320 : 340;
+      };
+
       const popupContent = `
         <div style="
-          padding: 12px; 
+          padding: 10px; 
           background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); 
-          border-radius: 8px; 
+          border-radius: 6px; 
           color: white; 
-          width: ${isMobile ? '280px' : '320px'};
+          width: ${getPopupWidth()}px;
           max-width: calc(100vw - 40px);
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          font-size: 12px;
-          line-height: 1.4;
+          font-size: 11px;
+          line-height: 1.3;
           box-sizing: border-box;
           overflow: hidden;
           word-wrap: break-word;
+          position: relative;
         ">
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; gap: 10px;">
-            <h3 style="margin: 0; font-size: 14px; font-weight: 600; word-break: break-word; flex: 1; min-width: 0;">${device.device_name || 'Unknown Device'}</h3>
-            ${isMyDevice ? `<span style="background: #a855f7; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">MY DEVICE</span>` : ''}
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px;">
+            <h3 style="margin: 0; font-size: 13px; font-weight: 600; word-break: break-word; flex: 1; min-width: 0;">${device.device_name || 'Unknown Device'}</h3>
+            ${isMyDevice ? `<span style="background: #a855f7; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">MY DEVICE</span>` : ''}
           </div>
           
-          <div style="margin-bottom: 8px; font-size: 11px;">
-            <p style="margin: 2px 0; word-break: break-all;"><strong>MAC:</strong> ${device.mac_address}</p>
-            ${device.ip_address ? `<p style="margin: 2px 0;"><strong>IP:</strong> ${device.ip_address}</p>` : ''}
-            <p style="margin: 2px 0;"><strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+          <div style="margin-bottom: 6px; font-size: 10px;">
+            <p style="margin: 1px 0; word-break: break-all;"><strong>MAC:</strong> ${device.mac_address}</p>
+            ${device.ip_address ? `<p style="margin: 1px 0;"><strong>IP:</strong> ${device.ip_address}</p>` : ''}
+            <p style="margin: 1px 0;"><strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
           </div>
           
-          <div style="margin: 8px 0; padding: 6px; background: rgba(0,0,0,0.25); border-radius: 4px; font-size: 11px;">
-            <p style="margin: 2px 0;">
+          <div style="margin: 6px 0; padding: 4px; background: rgba(0,0,0,0.25); border-radius: 3px; font-size: 10px;">
+            <p style="margin: 1px 0;">
               <strong>Status:</strong> <span style="color: ${getStatusTextColor(device.status)}; font-weight: 600;">${device.status || 'Unknown'}</span>
             </p>
-            <p style="margin: 2px 0; font-size: 10px; opacity: 0.9;">
+            <p style="margin: 1px 0; font-size: 9px; opacity: 0.9;">
               <strong>Added:</strong> ${formatDate(device.added_at)}
             </p>
-            <p style="margin: 2px 0; font-size: 10px; opacity: 0.9;">
+            <p style="margin: 1px 0; font-size: 9px; opacity: 0.9;">
               <strong>Last Seen:</strong> ${formatDate(device.last_seen)}
             </p>
           </div>
           
-          <div style="margin: 8px 0; padding: 6px; background: rgba(16, 185, 129, 0.15); border-radius: 4px; border-left: 3px solid #10b981; font-size: 11px;">
-            <p style="margin: 2px 0; color: #86efac;">
+          <div style="margin: 6px 0; padding: 4px; background: rgba(16, 185, 129, 0.15); border-radius: 3px; border-left: 2px solid #10b981; font-size: 10px;">
+            <p style="margin: 1px 0; color: #86efac;">
               <strong>Total Rewards:</strong> ${deviceReward?.total_rewards ? formatCurrency(Number(deviceReward.total_rewards)) : '$0.00'}
             </p>
           </div>
           
-          ${device.manual_location_notes ? `<p style="margin: 6px 0 0 0; font-size: 10px; opacity: 0.8; font-style: italic; word-break: break-word;">${device.manual_location_notes}</p>` : ''}
+          ${device.manual_location_notes ? `<p style="margin: 4px 0 0 0; font-size: 9px; opacity: 0.8; font-style: italic; word-break: break-word;">${device.manual_location_notes}</p>` : ''}
           
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 10px; opacity: 0.7; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 9px; opacity: 0.7; gap: 8px;">
             <span style="flex-shrink: 0;">${device.manual_latitude ? 'Manual location' : 'Auto-detected'}</span>
-            ${isMyDevice ? `<button onclick="window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer; font-size: 10px; white-space: nowrap; flex-shrink: 0;">View My Devices</button>` : ''}
+            ${isMyDevice ? `<button onclick="window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: 3px 8px; border-radius: 3px; color: white; cursor: pointer; font-size: 9px; white-space: nowrap; flex-shrink: 0;">View My Devices</button>` : ''}
           </div>
         </div>
       `;
 
-      // Create popup with better positioning and responsive offset
+      // Create popup with dynamic positioning based on zoom level
+      const getPopupOffset = () => {
+        const zoom = map.current?.getZoom() || 2;
+        const baseOffset = markerSize / 2 + 5;
+        return [0, -baseOffset];
+      };
+
+      const getPopupAnchor = () => {
+        const zoom = map.current?.getZoom() || 2;
+        // At high zoom levels, use different anchoring to prevent cutoff
+        if (zoom > 12) return 'bottom';
+        if (zoom > 8) return 'bottom-left';
+        return 'bottom';
+      };
+
       const popup = new mapboxgl.Popup({
-        offset: [0, -15],
+        offset: getPopupOffset(),
         closeButton: true,
         closeOnClick: false,
         className: 'device-popup',
         maxWidth: 'none',
-        anchor: 'bottom'
+        anchor: getPopupAnchor()
       }).setHTML(popupContent);
 
-      // Create marker with center anchor (fixed positioning)
+      // Create marker with center anchor for stable positioning
       const marker = new mapboxgl.Marker({
         element: markerElement,
         anchor: 'center'
@@ -346,13 +368,13 @@ export const DeviceMap = () => {
 
     setMarkers(newMarkers);
 
-    // Fit map to show all devices
+    // Fit map to show all devices with appropriate padding
     if (hasValidCoordinates && devices.length <= 50) {
-      const padding = isMobile ? 40 : 60;
+      const padding = isMobile ? 50 : 80;
       try {
         map.current.fitBounds(bounds, { 
           padding,
-          maxZoom: isMobile ? 12 : 15
+          maxZoom: isMobile ? 10 : 12  // Reduced max zoom to prevent extreme cutoff
         });
         console.log('Fitted map bounds to show all devices');
       } catch (error) {
