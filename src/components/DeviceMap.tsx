@@ -79,6 +79,28 @@ export const DeviceMap = () => {
     },
   });
 
+  // Add query for user's own devices
+  const { data: userDevices } = useQuery({
+    queryKey: ['user-devices'],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      console.log('Fetching user devices for navigation...');
+      const { data, error } = await supabase
+        .from('ddaas_devices')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('added_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching user devices:', error);
+        throw error;
+      }
+      console.log('Fetched user devices:', data);
+      return data as DDaaSDevice[];
+    },
+    enabled: !!user?.id,
+  });
+
   const initializeMap = () => {
     if (!mapContainer.current || map.current) return;
 
@@ -195,17 +217,42 @@ export const DeviceMap = () => {
     });
   };
 
-  const navigateToMyDevices = () => {
+  const navigateToMyDevices = async () => {
     console.log('Navigating to my devices...');
     
     // Find and click the devices tab
     const devicesTab = document.querySelector('[value="devices"]') as HTMLElement;
     if (devicesTab) {
       devicesTab.click();
-      toast({
-        title: "Navigation",
-        description: "Switched to My Devices tab",
-      });
+      
+      // Wait a moment for the tab to switch, then open the first device
+      setTimeout(async () => {
+        if (userDevices && userDevices.length > 0) {
+          const firstDevice = userDevices[0];
+          console.log('Opening first device:', firstDevice.device_name);
+          
+          // Find and click the MyDevicesList button to open the sheet
+          const myDevicesButton = document.querySelector('button:has(svg + :contains("My DDaaS Devices"))') as HTMLElement;
+          if (myDevicesButton) {
+            myDevicesButton.click();
+            
+            toast({
+              title: "Navigation",
+              description: `Switched to My Devices and showing ${firstDevice.device_name || 'your first device'}`,
+            });
+          } else {
+            toast({
+              title: "Navigation",
+              description: "Switched to My Devices tab",
+            });
+          }
+        } else {
+          toast({
+            title: "Navigation",
+            description: "Switched to My Devices tab",
+          });
+        }
+      }, 100);
     } else {
       toast({
         title: "Navigation Error",
