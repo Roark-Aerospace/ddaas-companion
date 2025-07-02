@@ -21,6 +21,9 @@ export type Database = {
           location_accuracy: number | null
           longitude: number | null
           mac_address: string
+          manual_latitude: number | null
+          manual_location_notes: string | null
+          manual_longitude: number | null
           ping_response_time: number | null
           status: string | null
           user_id: string
@@ -36,6 +39,9 @@ export type Database = {
           location_accuracy?: number | null
           longitude?: number | null
           mac_address: string
+          manual_latitude?: number | null
+          manual_location_notes?: string | null
+          manual_longitude?: number | null
           ping_response_time?: number | null
           status?: string | null
           user_id: string
@@ -51,6 +57,9 @@ export type Database = {
           location_accuracy?: number | null
           longitude?: number | null
           mac_address?: string
+          manual_latitude?: number | null
+          manual_location_notes?: string | null
+          manual_longitude?: number | null
           ping_response_time?: number | null
           status?: string | null
           user_id?: string

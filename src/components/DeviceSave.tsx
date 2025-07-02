@@ -9,15 +9,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Zap } from 'lucide-react';
 import { WiFiDevice } from './WiFiScanner';
 import { LocationData } from './LocationCapture';
+import { ManualLocationData } from './ManualLocationInput';
 
 interface DeviceSaveProps {
   selectedDevice: WiFiDevice;
   location: LocationData;
+  manualLocation: ManualLocationData | null;
   manualIp: string;
   onDeviceSaved: () => void;
 }
 
-export const DeviceSave = ({ selectedDevice, location, manualIp, onDeviceSaved }: DeviceSaveProps) => {
+export const DeviceSave = ({ selectedDevice, location, manualLocation, manualIp, onDeviceSaved }: DeviceSaveProps) => {
   const [deviceName, setDeviceName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -45,24 +47,35 @@ export const DeviceSave = ({ selectedDevice, location, manualIp, onDeviceSaved }
         return;
       }
 
+      const deviceData = {
+        user_id: user.id,
+        mac_address: selectedDevice.bssid,
+        device_name: deviceName || selectedDevice.ssid || 'Unknown Device',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        location_accuracy: location.accuracy,
+        ip_address: deviceIp,
+        status: 'unknown',
+        // Add manual location data if provided
+        manual_latitude: manualLocation?.latitude || null,
+        manual_longitude: manualLocation?.longitude || null,
+        manual_location_notes: manualLocation?.notes || null,
+      };
+
       const { error } = await supabase
         .from('ddaas_devices')
-        .insert({
-          user_id: user.id,
-          mac_address: selectedDevice.bssid,
-          device_name: deviceName || selectedDevice.ssid || 'Unknown Device',
-          latitude: location.latitude,
-          longitude: location.longitude,
-          location_accuracy: location.accuracy,
-          ip_address: deviceIp,
-          status: 'unknown',
-        });
+        .insert(deviceData);
 
       if (error) throw error;
 
+      const locationUsed = manualLocation ? 'manual' : 'GPS';
+      const accuracyInfo = manualLocation 
+        ? 'manually entered coordinates' 
+        : `±${location.accuracy.toFixed(1)}m accuracy`;
+
       toast({
         title: "Device Added",
-        description: "DDaaS device has been successfully added with IP address for monitoring!",
+        description: `DDaaS device saved with ${locationUsed} location (${accuracyInfo})!`,
       });
 
       onDeviceSaved();
@@ -102,10 +115,30 @@ export const DeviceSave = ({ selectedDevice, location, manualIp, onDeviceSaved }
         </div>
 
         <div className="bg-white/10 p-3 rounded-lg">
-          <div className="text-sm text-white">
+          <div className="text-sm text-white space-y-1">
             <div><strong>MAC:</strong> {selectedDevice.bssid}</div>
             <div><strong>IP:</strong> {selectedDevice.ip || manualIp}</div>
             <div><strong>Network:</strong> {selectedDevice.ssid}</div>
+            
+            <div className="pt-2 border-t border-white/20">
+              <div><strong>GPS Location:</strong></div>
+              <div className="text-xs ml-2">
+                Lat: {location.latitude.toFixed(6)}, Lng: {location.longitude.toFixed(6)}
+                <span className="text-slate-300"> (±{location.accuracy.toFixed(1)}m)</span>
+              </div>
+            </div>
+            
+            {manualLocation && (
+              <div className="pt-2 border-t border-white/20">
+                <div><strong>Manual Location:</strong></div>
+                <div className="text-xs ml-2">
+                  Lat: {manualLocation.latitude.toFixed(6)}, Lng: {manualLocation.longitude.toFixed(6)}
+                  {manualLocation.notes && (
+                    <div className="text-slate-300">Notes: {manualLocation.notes}</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

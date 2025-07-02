@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, MapPin, AlertTriangle, Target } from 'lucide-react';
+import { Loader2, MapPin, AlertTriangle, Target, Edit } from 'lucide-react';
+import { ManualLocationInput, ManualLocationData } from './ManualLocationInput';
 
 export interface LocationData {
   latitude: number;
@@ -17,12 +17,15 @@ export interface LocationData {
 
 interface LocationCaptureProps {
   location: LocationData | null;
+  manualLocation: ManualLocationData | null;
   onLocationFound: (location: LocationData) => void;
+  onManualLocationEntered: (location: ManualLocationData) => void;
 }
 
-export const LocationCapture = ({ location, onLocationFound }: LocationCaptureProps) => {
+export const LocationCapture = ({ location, manualLocation, onLocationFound, onManualLocationEntered }: LocationCaptureProps) => {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
@@ -131,83 +134,124 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
     return 'Low (IP-based)';
   };
 
-  return (
-    <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-      <CardHeader>
-        <CardTitle className="text-white flex items-center">
-          <Target className="w-5 h-5 mr-2" />
-          Step 2: Get High-Accuracy Location
-        </CardTitle>
-        <CardDescription className="text-slate-300">
-          Capture precise GPS coordinates (works best outdoors with HTTPS)
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Button 
-          onClick={getCurrentLocation}
-          disabled={isGettingLocation}
-          className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
-        >
-          {isGettingLocation ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Getting High-Accuracy Location...
-            </>
-          ) : (
-            <>
-              <Target className="w-4 h-4 mr-2" />
-              Get Precise Location
-            </>
-          )}
-        </Button>
+  const isLowAccuracy = location && location.accuracy > 100;
 
-        {locationError && (
-          <Card className="bg-red-900/20 border-red-500/30">
-            <CardContent className="p-3">
-              <div className="flex items-start space-x-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-red-200 text-sm">{locationError}</p>
-                  <div className="mt-2 text-xs text-red-300">
-                    <p>💡 Tips for better accuracy:</p>
-                    <ul className="list-disc list-inside mt-1 space-y-1">
-                      <li>Go outdoors with clear sky view</li>
-                      <li>Ensure site is loaded via HTTPS</li>
-                      <li>Allow location access when prompted</li>
-                      <li>Wait longer for GPS to acquire signal</li>
-                    </ul>
+  return (
+    <div className="space-y-4">
+      <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center">
+            <Target className="w-5 h-5 mr-2" />
+            Step 2: Get High-Accuracy Location
+          </CardTitle>
+          <CardDescription className="text-slate-300">
+            Capture precise GPS coordinates (works best outdoors with HTTPS)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button 
+            onClick={getCurrentLocation}
+            disabled={isGettingLocation}
+            className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+          >
+            {isGettingLocation ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Getting High-Accuracy Location...
+              </>
+            ) : (
+              <>
+                <Target className="w-4 h-4 mr-2" />
+                Get Precise Location
+              </>
+            )}
+          </Button>
+
+          {locationError && (
+            <Card className="bg-red-900/20 border-red-500/30">
+              <CardContent className="p-3">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-red-200 text-sm">{locationError}</p>
+                    <div className="mt-2 text-xs text-red-300">
+                      <p>💡 Tips for better accuracy:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-1">
+                        <li>Go outdoors with clear sky view</li>
+                        <li>Ensure site is loaded via HTTPS</li>
+                        <li>Allow location access when prompted</li>
+                        <li>Wait longer for GPS to acquire signal</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          )}
 
-        {location && (
-          <div className="bg-white/10 p-3 rounded-lg space-y-2">
-            <div className="text-sm text-white">
-              <div>Latitude: {location.latitude.toFixed(8)}</div>
-              <div>Longitude: {location.longitude.toFixed(8)}</div>
-              <div className={`flex items-center ${getAccuracyColor(location.accuracy)}`}>
-                <Target className="w-4 h-4 mr-1" />
-                Accuracy: ±{location.accuracy.toFixed(1)}m ({getAccuracyDescription(location.accuracy)})
+          {location && (
+            <div className="bg-white/10 p-3 rounded-lg space-y-2">
+              <div className="text-sm text-white">
+                <div>Latitude: {location.latitude.toFixed(8)}</div>
+                <div>Longitude: {location.longitude.toFixed(8)}</div>
+                <div className={`flex items-center ${getAccuracyColor(location.accuracy)}`}>
+                  <Target className="w-4 h-4 mr-1" />
+                  Accuracy: ±{location.accuracy.toFixed(1)}m ({getAccuracyDescription(location.accuracy)})
+                </div>
+                {location.altitude !== null && location.altitude !== undefined && (
+                  <div>Altitude: {location.altitude.toFixed(1)}m</div>
+                )}
               </div>
-              {location.altitude !== null && location.altitude !== undefined && (
-                <div>Altitude: {location.altitude.toFixed(1)}m</div>
+              {isLowAccuracy && (
+                <div className="text-xs text-yellow-300 bg-yellow-900/20 p-2 rounded">
+                  ⚠️ Low accuracy detected. For better results, try going outdoors or entering coordinates manually.
+                </div>
               )}
             </div>
-            {location.accuracy > 100 && (
-              <div className="text-xs text-yellow-300 bg-yellow-900/20 p-2 rounded">
-                ⚠️ Low accuracy detected. For better results, try going outdoors or ensuring GPS is enabled.
-              </div>
-            )}
-          </div>
-        )}
+          )}
 
-        <div className="text-xs text-slate-400 bg-white/5 p-2 rounded">
-          <p><strong>Note:</strong> Best accuracy requires GPS and HTTPS. Indoor locations may be less precise.</p>
-        </div>
-      </CardContent>
-    </Card>
+          {(isLowAccuracy || locationError) && (
+            <Button 
+              onClick={() => setShowManualInput(!showManualInput)}
+              variant="outline"
+              className="w-full bg-white/10 hover:bg-white/20 text-white border-white/30"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              {showManualInput ? 'Hide Manual Entry' : 'Enter Coordinates Manually'}
+            </Button>
+          )}
+
+          <div className="text-xs text-slate-400 bg-white/5 p-2 rounded">
+            <p><strong>Note:</strong> Best accuracy requires GPS and HTTPS. Indoor locations may be less precise.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ManualLocationInput 
+        showForm={showManualInput}
+        onLocationEntered={(manualLoc) => {
+          onManualLocationEntered(manualLoc);
+          setShowManualInput(false);
+        }}
+      />
+
+      {manualLocation && (
+        <Card className="bg-green-900/20 border-green-500/30">
+          <CardContent className="p-3">
+            <div className="flex items-start space-x-3">
+              <MapPin className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-green-200 text-sm font-medium">Manual Location Set</p>
+                <div className="text-xs text-green-300 mt-1">
+                  <div>Latitude: {manualLocation.latitude.toFixed(8)}</div>
+                  <div>Longitude: {manualLocation.longitude.toFixed(8)}</div>
+                  {manualLocation.notes && <div>Notes: {manualLocation.notes}</div>}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };

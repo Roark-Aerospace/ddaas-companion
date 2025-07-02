@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import { WiFiScanner, type WiFiDevice } from './WiFiScanner';
 import { ManualIPInput } from './ManualIPInput';
 import { LocationCapture, type LocationData } from './LocationCapture';
+import { ManualLocationData } from './ManualLocationInput';
 import { DeviceSave } from './DeviceSave';
 
 export const AddDeviceSheet = () => {
@@ -14,12 +15,14 @@ export const AddDeviceSheet = () => {
   const [wifiDevices, setWifiDevices] = useState<WiFiDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<WiFiDevice | null>(null);
   const [location, setLocation] = useState<LocationData | null>(null);
+  const [manualLocation, setManualLocation] = useState<ManualLocationData | null>(null);
   const [manualIp, setManualIp] = useState('');
 
   const handleDeviceSaved = () => {
     // Reset form
     setSelectedDevice(null);
     setLocation(null);
+    setManualLocation(null);
     setManualIp('');
     setWifiDevices([]);
     setIsOpen(false);
@@ -62,13 +65,16 @@ export const AddDeviceSheet = () => {
 
             <LocationCapture
               location={location}
+              manualLocation={manualLocation}
               onLocationFound={setLocation}
+              onManualLocationEntered={setManualLocation}
             />
 
             {selectedDevice && location && (selectedDevice.ip || manualIp) && (
               <DeviceSave
                 selectedDevice={selectedDevice}
                 location={location}
+                manualLocation={manualLocation}
                 manualIp={manualIp}
                 onDeviceSaved={handleDeviceSaved}
               />
