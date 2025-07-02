@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -203,14 +202,31 @@ export const DeviceMap = () => {
 
   const navigateToMyDevices = () => {
     console.log('Navigating to my devices...');
-    // Find the devices tab by its value attribute
-    const devicesTab = document.querySelector('[value="devices"]') as HTMLElement;
-    if (devicesTab) {
-      devicesTab.click();
-      console.log('Successfully clicked devices tab');
-    } else {
-      console.log('Devices tab not found, trying alternative approach');
-      // Find all tab triggers and look for the one containing "Devices"
+    
+    // Close any open popups first
+    const openPopups = document.querySelectorAll('.mapboxgl-popup');
+    openPopups.forEach(popup => {
+      const closeButton = popup.querySelector('.mapboxgl-popup-close-button') as HTMLElement;
+      if (closeButton) {
+        closeButton.click();
+      }
+    });
+
+    // Wait a moment for popup to close, then navigate
+    setTimeout(() => {
+      // Try multiple methods to find and click the devices tab
+      const devicesTab = document.querySelector('[value="devices"]') as HTMLElement;
+      if (devicesTab) {
+        devicesTab.click();
+        console.log('Successfully clicked devices tab');
+        toast({
+          title: "Navigation",
+          description: "Switched to My Devices tab",
+        });
+        return;
+      }
+
+      // Alternative method: look for tab by text content
       const tabTriggers = document.querySelectorAll('[role="tab"]');
       let found = false;
       tabTriggers.forEach(tab => {
@@ -218,17 +234,22 @@ export const DeviceMap = () => {
           (tab as HTMLElement).click();
           found = true;
           console.log('Found and clicked devices tab by text content');
+          toast({
+            title: "Navigation",
+            description: "Switched to My Devices tab",
+          });
         }
       });
+
       if (!found) {
         console.log('Could not find devices tab');
         toast({
           title: "Navigation Error",
-          description: "Could not navigate to devices tab",
+          description: "Could not navigate to devices tab. Please click the Devices tab manually.",
           variant: "destructive",
         });
       }
-    }
+    }, 100);
   };
 
   const addDeviceMarkers = (devices: DDaaSDevice[]) => {
@@ -301,7 +322,7 @@ export const DeviceMap = () => {
         markerElement.style.transform = 'scale(1)';
       });
 
-      // Create popup content
+      // Create popup content with improved button
       const popupContent = `
         <div style="padding: ${isMobile ? '16px' : '12px'}; background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); border-radius: 8px; color: white; min-width: ${isMobile ? '280px' : '250px'}; max-width: ${isMobile ? '320px' : '300px'}; font-family: system-ui;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: ${isMobile ? '12px' : '8px'};">
@@ -337,7 +358,7 @@ export const DeviceMap = () => {
           
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: ${isMobile ? '12px' : '8px'}; font-size: ${isMobile ? '11px' : '10px'}; opacity: 0.6;">
             <span>${device.manual_latitude ? 'Manual location' : 'Auto-detected location'}</span>
-            ${isMyDevice ? `<button onclick="window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: ${isMobile ? '6px 12px' : '4px 8px'}; border-radius: 4px; color: white; cursor: pointer; font-size: ${isMobile ? '11px' : '10px'}; display: flex; align-items: center; gap: 4px; touch-action: manipulation; min-height: ${isMobile ? '32px' : 'auto'};">View My Devices</button>` : ''}
+            ${isMyDevice ? `<button id="navigate-btn-${device.id}" style="background: #a855f7; border: none; padding: ${isMobile ? '8px 12px' : '6px 10px'}; border-radius: 4px; color: white; cursor: pointer; font-size: ${isMobile ? '12px' : '11px'}; display: flex; align-items: center; gap: 4px; touch-action: manipulation; min-height: ${isMobile ? '36px' : '32px'}; font-weight: 500; transition: background-color 0.2s;">View My Devices</button>` : ''}
           </div>
         </div>
       `;
@@ -345,11 +366,32 @@ export const DeviceMap = () => {
       const popup = new mapboxgl.Popup({
         offset: Math.max(25, markerSize / 2 + 10),
         closeButton: true,
-        closeOnClick: isMobile,
+        closeOnClick: false, // Changed to false so button clicks work
         className: 'device-popup',
         maxWidth: isMobile ? '320px' : '300px',
-        anchor: 'bottom'
+        anchor: 'bottom',
+        focusAfterOpen: false
       }).setHTML(popupContent);
+
+      // Add event listener for the navigate button after popup opens
+      popup.on('open', () => {
+        const navigateBtn = document.getElementById(`navigate-btn-${device.id}`);
+        if (navigateBtn) {
+          navigateBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigateToMyDevices();
+          });
+          
+          // Add hover effect
+          navigateBtn.addEventListener('mouseenter', () => {
+            navigateBtn.style.backgroundColor = '#9333ea';
+          });
+          navigateBtn.addEventListener('mouseleave', () => {
+            navigateBtn.style.backgroundColor = '#a855f7';
+          });
+        }
+      });
 
       const marker = new mapboxgl.Marker(markerElement)
         .setLngLat([lng, lat])
