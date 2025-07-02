@@ -99,6 +99,13 @@ export type Database = {
             referencedRelation: "ddaas_devices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "device_ping_history_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "device_reward_summary"
+            referencedColumns: ["device_id"]
+          },
         ]
       }
       device_rewards: {
@@ -142,6 +149,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ddaas_devices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_rewards_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "device_reward_summary"
+            referencedColumns: ["device_id"]
           },
         ]
       }
@@ -207,15 +221,7 @@ export type Database = {
           total_rewards: number | null
           user_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "device_rewards_device_id_fkey"
-            columns: ["device_id"]
-            isOneToOne: false
-            referencedRelation: "ddaas_devices"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
