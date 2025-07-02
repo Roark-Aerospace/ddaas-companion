@@ -99,7 +99,7 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
           }
         }
       } else {
-        // Enhanced browser geolocation following MDN best practices
+        // Browser environment - simplified geolocation
         console.log('Browser environment detected, using Web Geolocation API');
         
         // Check if geolocation is supported
@@ -107,43 +107,12 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
           throw new Error('Geolocation is not supported by this browser');
         }
 
-        // Check if we're in a secure context (HTTPS) - required for geolocation in modern browsers
-        if (!window.isSecureContext && window.location.protocol !== 'http:' && window.location.hostname !== 'localhost') {
-          setLocationError('Location access requires a secure connection (HTTPS). Please use HTTPS or localhost.');
-          toast({
-            title: "Secure Connection Required",
-            description: "Location access requires HTTPS. Please use a secure connection.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Check permissions using the Permissions API if available (Chrome/modern browsers)
-        if ('permissions' in navigator) {
-          try {
-            const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-            console.log('Geolocation permission status:', permissionStatus.state);
-            
-            if (permissionStatus.state === 'denied') {
-              setLocationError('Location access is blocked. Please click the location icon in your browser\'s address bar to allow location access, then refresh and try again.');
-              toast({
-                title: "Location Access Blocked",
-                description: "Location is blocked in your browser. Click the location/lock icon in the address bar, allow location access, then refresh the page.",
-                variant: "destructive",
-              });
-              return;
-            }
-          } catch (permissionError) {
-            console.log('Permissions API not fully supported, proceeding with direct geolocation request');
-          }
-        }
-
-        // Request location with optimal settings for accuracy and Chrome compatibility
+        // Request location directly without complex permission checks
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           const options: PositionOptions = {
-            enableHighAccuracy: true,    // Request GPS if available
-            timeout: 10000,              // 10 second timeout
-            maximumAge: 60000            // Accept cached position up to 1 minute old
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
           };
 
           navigator.geolocation.getCurrentPosition(
@@ -177,38 +146,31 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
       
       // Handle specific geolocation error codes
       if (error.code === 1) { // PERMISSION_DENIED
-        setLocationError('Location access denied. Please allow location access when prompted, or click the location icon in your browser\'s address bar to enable location services.');
+        setLocationError('Location access denied. Please allow location access when prompted by your browser.');
         toast({
           title: "Location Permission Denied",
-          description: "Please allow location access when prompted, or click the location/lock icon in your browser's address bar to enable location access.",
+          description: "Please allow location access when prompted by your browser.",
           variant: "destructive",
         });
       } else if (error.code === 2) { // POSITION_UNAVAILABLE
-        setLocationError('Location services unavailable. Please check your device location settings and ensure you have a good signal.');
+        setLocationError('Location services unavailable. Please check your device location settings.');
         toast({
           title: "Location Unavailable",
-          description: "Unable to determine your location. Please check your device location settings and network connection.",
+          description: "Unable to determine your location. Please check your device location settings.",
           variant: "destructive",
         });
       } else if (error.code === 3) { // TIMEOUT
-        setLocationError('Location request timed out. Please try again or check your connection.');
+        setLocationError('Location request timed out. Please try again.');
         toast({
           title: "Location Request Timeout",
           description: "Location request took too long. Please try again.",
           variant: "destructive",
         });
-      } else if (error.message?.includes('secure context') || error.message?.includes('HTTPS')) {
-        setLocationError('Location access requires a secure connection. Please use HTTPS.');
-        toast({
-          title: "Secure Connection Required",
-          description: "Location access requires HTTPS. Please use a secure connection.",
-          variant: "destructive",
-        });
       } else {
-        setLocationError('Unable to get location. Please check your browser settings and device location services.');
+        setLocationError('Unable to get location. Please check your browser settings and allow location access.');
         toast({
           title: "Location Failed",
-          description: "Unable to get current location. Please check your browser and device settings.",
+          description: "Unable to get current location. Please check your browser settings.",
           variant: "destructive",
         });
       }
@@ -219,21 +181,16 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
 
   const openLocationSettings = () => {
     if (typeof window !== 'undefined' && (window as any).Capacitor) {
-      // For mobile apps, we can't directly open settings, but provide instructions
+      // For mobile apps
       toast({
         title: "Enable Location Services",
         description: "Go to Settings > Privacy & Security > Location Services and enable location for this app.",
       });
     } else {
-      // For web browsers, provide detailed Chrome-specific instructions
-      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-      const instructions = isChrome 
-        ? "In Chrome: Click the location/lock icon in the address bar, select 'Allow' for location, then refresh the page. Or go to Settings > Privacy and security > Site Settings > Location."
-        : "Click the location icon in your browser's address bar and select 'Allow', then refresh the page. You may also need to check your browser's location settings.";
-      
+      // For web browsers
       toast({
         title: "Enable Location Access",
-        description: instructions,
+        description: "Click 'Allow' when your browser asks for location permission, or check your browser's location settings.",
         duration: 8000,
       });
     }
