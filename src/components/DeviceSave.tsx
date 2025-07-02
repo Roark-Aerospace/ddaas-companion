@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap, AlertTriangle } from 'lucide-react';
 import { WiFiDevice } from './WiFiScanner';
 import { LocationData } from './LocationCapture';
 import { ManualLocationData } from './ManualLocationInput';
@@ -34,6 +34,15 @@ export const DeviceSave = ({ selectedDevice, location, manualLocation, manualIp,
       return;
     }
 
+    if (!deviceName.trim()) {
+      toast({
+        title: "Missing Device Name",
+        description: "Please enter a device name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +59,7 @@ export const DeviceSave = ({ selectedDevice, location, manualLocation, manualIp,
       const deviceData = {
         user_id: user.id,
         mac_address: selectedDevice.bssid,
-        device_name: deviceName || selectedDevice.ssid || 'Unknown Device',
+        device_name: deviceName.trim(),
         latitude: location.latitude,
         longitude: location.longitude,
         location_accuracy: location.accuracy,
@@ -104,14 +113,21 @@ export const DeviceSave = ({ selectedDevice, location, manualLocation, manualIp,
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="deviceName" className="text-white">Device Name (Optional)</Label>
+          <Label htmlFor="deviceName" className="text-white">
+            Device Name <span className="text-red-400">*</span>
+          </Label>
           <Input
             id="deviceName"
-            placeholder={selectedDevice.ssid || 'Enter device name'}
+            placeholder="Enter device name"
             value={deviceName}
             onChange={(e) => setDeviceName(e.target.value)}
             className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+            required
           />
+          <div className="flex items-start space-x-2 text-amber-300 text-sm">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <p>Device name cannot be changed once saved</p>
+          </div>
         </div>
 
         <div className="bg-white/10 p-3 rounded-lg">
@@ -144,8 +160,8 @@ export const DeviceSave = ({ selectedDevice, location, manualLocation, manualIp,
 
         <Button 
           onClick={saveDevice}
-          disabled={isSaving}
-          className="w-full bg-green-600/80 hover:bg-green-600 text-white"
+          disabled={isSaving || !deviceName.trim()}
+          className="w-full bg-green-600/80 hover:bg-green-600 text-white disabled:opacity-50"
         >
           {isSaving ? (
             <>
