@@ -62,6 +62,33 @@ async function pingDevice(ip: string): Promise<PingResult> {
   }
 }
 
+async function sendDeviceAlert(deviceId: string, deviceName: string, userId: string, alertType: 'offline' | 'online', userEmail?: string) {
+  try {
+    const alertResponse = await fetch(`https://pwmndpdgkbtfyqabgvij.supabase.co/functions/v1/send-device-alerts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({
+        deviceId,
+        deviceName,
+        userId,
+        alertType,
+        userEmail
+      })
+    });
+
+    if (!alertResponse.ok) {
+      console.error('Failed to send alert:', await alertResponse.text());
+    } else {
+      console.log(`Alert sent for device ${deviceName}: ${alertType}`);
+    }
+  } catch (error) {
+    console.error('Error sending alert:', error);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -80,7 +107,7 @@ serve(async (req) => {
       
       const { data: device, error: deviceError } = await supabaseClient
         .from('ddaas_devices')
-        .select('id, ip_address')
+        .select('id, ip_address, device_name, status, user_id')
         .eq('id', deviceId)
         .single();
 
@@ -95,12 +122,14 @@ serve(async (req) => {
       }
 
       const pingResult = await pingDevice(device.ip_address);
+      const newStatus = pingResult.success ? 'online' : 'offline';
+      const previousStatus = device.status;
       
       // Update device status
       await supabaseClient
         .from('ddaas_devices')
         .update({
-          status: pingResult.success ? 'online' : 'offline',
+          status: newStatus,
           last_ping_at: new Date().toISOString(),
           ping_response_time: pingResult.responseTime || null,
         })
@@ -116,6 +145,13 @@ serve(async (req) => {
           error_message: pingResult.error || null,
         });
 
+      // Send alert if status changed
+      if (previousStatus !== newStatus && (newStatus === 'offline' || (previousStatus === 'offline' && newStatus === 'online'))) {
+        // Get user email from auth if available
+        const { data: authUser } = await supabaseClient.auth.admin.getUserById(device.user_id);
+        await sendDeviceAlert(deviceId, device.device_name || 'Unknown Device', device.user_id, newStatus as 'offline' | 'online', authUser?.user?.email);
+      }
+
       return new Response(
         JSON.stringify({ success: true, pingResult }),
         { 
@@ -130,7 +166,7 @@ serve(async (req) => {
       
       const { data: devices, error: devicesError } = await supabaseClient
         .from('ddaas_devices')
-        .select('id, ip_address, device_name')
+        .select('id, ip_address, device_name, status, user_id')
         .not('ip_address', 'is', null);
 
       if (devicesError) {
@@ -150,12 +186,14 @@ serve(async (req) => {
         console.log(`Pinging device ${device.device_name} (${device.ip_address})...`);
         
         const pingResult = await pingDevice(device.ip_address);
+        const newStatus = pingResult.success ? 'online' : 'offline';
+        const previousStatus = device.status;
         
         // Update device status
         const { error: updateError } = await supabaseClient
           .from('ddaas_devices')
           .update({
-            status: pingResult.success ? 'online' : 'offline',
+            status: newStatus,
             last_ping_at: new Date().toISOString(),
             ping_response_time: pingResult.responseTime || null,
           })
@@ -179,10 +217,19 @@ serve(async (req) => {
           console.error(`Error recording ping history for device ${device.id}:`, historyError);
         }
 
+        // Send alert if status changed from online to offline or offline to online
+        if (previousStatus !== newStatus && (newStatus === 'offline' || (previousStatus === 'offline' && newStatus === 'online'))) {
+          // Get user email from auth
+          const { data: authUser } = await supabaseClient.auth.admin.getUserById(device.user_id);
+          await sendDeviceAlert(device.id, device.device_name || 'Unknown Device', device.user_id, newStatus as 'offline' | 'online', authUser?.user?.email);
+        }
+
         results.push({
           deviceId: device.id,
           deviceName: device.device_name,
           ip: device.ip_address,
+          previousStatus,
+          newStatus,
           ...pingResult,
         });
       }

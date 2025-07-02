@@ -66,6 +66,33 @@ export type Database = {
         }
         Relationships: []
       }
+      device_alert_history: {
+        Row: {
+          alert_type: string
+          device_id: string
+          id: string
+          notification_method: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          device_id: string
+          id?: string
+          notification_method: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          device_id?: string
+          id?: string
+          notification_method?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       device_ping_history: {
         Row: {
           device_id: string | null
@@ -158,6 +185,36 @@ export type Database = {
             referencedColumns: ["device_id"]
           },
         ]
+      }
+      user_alert_preferences: {
+        Row: {
+          alert_frequency: string
+          created_at: string
+          email_alerts_enabled: boolean
+          id: string
+          push_notifications_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_frequency?: string
+          created_at?: string
+          email_alerts_enabled?: boolean
+          id?: string
+          push_notifications_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_frequency?: string
+          created_at?: string
+          email_alerts_enabled?: boolean
+          id?: string
+          push_notifications_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_payment_preferences: {
         Row: {
