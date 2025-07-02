@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -127,9 +126,13 @@ export const DeviceMap = () => {
         });
       });
 
-      // Add zoom event listener to update marker sizes
+      // Add zoom event listener with debouncing to prevent excessive updates
+      let zoomTimeout: NodeJS.Timeout;
       map.current.on('zoom', () => {
-        updateMarkerSizes();
+        clearTimeout(zoomTimeout);
+        zoomTimeout = setTimeout(() => {
+          updateMarkerSizes();
+        }, 100);
       });
 
       map.current.on('sourcedata', (e) => {
@@ -153,56 +156,55 @@ export const DeviceMap = () => {
   };
 
   const getMarkerSizeForZoom = (zoom: number, isMyDevice: boolean) => {
-    // Improved scaling logic - markers get smaller as you zoom out
-    const minSize = isMobile ? 6 : 8;
-    const maxSize = isMobile ? 24 : 20;
+    // More aggressive scaling - clearer size difference between zoom levels
+    const minSize = isMobile ? 4 : 6;
+    const maxSize = isMobile ? 28 : 24;
     
-    // Zoom levels: 0 (world view) to 18+ (street level)
-    // At zoom 0-2: smallest size
-    // At zoom 8+: largest size
+    // Exponential scaling for more dramatic size changes
     let scaleFactor;
-    if (zoom <= 2) {
-      scaleFactor = 0; // Minimum size
-    } else if (zoom >= 8) {
-      scaleFactor = 1; // Maximum size
+    if (zoom <= 1) {
+      scaleFactor = 0; // Minimum size at world view
+    } else if (zoom >= 10) {
+      scaleFactor = 1; // Maximum size when zoomed in
     } else {
-      scaleFactor = (zoom - 2) / 6; // Linear interpolation between zoom 2 and 8
+      // Exponential curve for more noticeable scaling
+      scaleFactor = Math.pow((zoom - 1) / 9, 0.7);
     }
     
     let baseSize = minSize + (maxSize - minSize) * scaleFactor;
     
     // Add extra size for user's own devices
     if (isMyDevice) {
-      baseSize *= 1.3;
+      baseSize *= 1.4;
     }
     
-    return Math.round(baseSize);
+    return Math.max(minSize, Math.round(baseSize));
   };
 
   const getBorderWidthForZoom = (zoom: number, isMyDevice: boolean) => {
     const minBorder = 1;
-    const maxBorder = isMobile ? 3 : 2;
+    const maxBorder = isMobile ? 4 : 3;
     
     let scaleFactor;
-    if (zoom <= 2) {
+    if (zoom <= 1) {
       scaleFactor = 0;
-    } else if (zoom >= 8) {
+    } else if (zoom >= 10) {
       scaleFactor = 1;
     } else {
-      scaleFactor = (zoom - 2) / 6;
+      scaleFactor = Math.pow((zoom - 1) / 9, 0.7);
     }
     
     let borderWidth = minBorder + (maxBorder - minBorder) * scaleFactor;
     
     if (isMyDevice) {
-      borderWidth *= 1.2;
+      borderWidth *= 1.3;
     }
     
     return Math.max(1, Math.round(borderWidth));
   };
 
   const updateMarkerSizes = () => {
-    if (!map.current) return;
+    if (!map.current || markers.length === 0) return;
     
     const currentZoom = map.current.getZoom();
     console.log('Updating marker sizes for zoom level:', currentZoom);
@@ -214,15 +216,15 @@ export const DeviceMap = () => {
       const newSize = getMarkerSizeForZoom(currentZoom, isMyDevice);
       const newBorderWidth = getBorderWidthForZoom(currentZoom, isMyDevice);
       
-      // Update size without affecting positioning
-      markerElement.style.width = `${newSize}px`;
-      markerElement.style.height = `${newSize}px`;
-      markerElement.style.borderWidth = `${newBorderWidth}px`;
+      // Update size properties without changing positioning
+      markerElement.style.setProperty('width', `${newSize}px`, 'important');
+      markerElement.style.setProperty('height', `${newSize}px`, 'important');
+      markerElement.style.setProperty('border-width', `${newBorderWidth}px`, 'important');
       
       // Update popup offset to match new marker size
       const popup = marker.getPopup();
       if (popup) {
-        popup.options.offset = Math.max(15, newSize / 2 + 5);
+        popup.options.offset = [0, -Math.max(20, newSize / 2 + 10)];
       }
     });
   };
@@ -314,50 +316,51 @@ export const DeviceMap = () => {
       const deviceReward = rewards?.find(r => r.device_id === device.id);
       const isMyDevice = user?.id === device.user_id;
 
-      // Create custom marker element with zoom-responsive sizing
+      // Create custom marker element with proper anchoring
       const markerElement = document.createElement('div');
       const markerSize = getMarkerSizeForZoom(currentZoom, isMyDevice);
       const borderWidth = getBorderWidthForZoom(currentZoom, isMyDevice);
       
       markerElement.className = `device-marker touch-manipulation ${isMyDevice ? 'my-device' : ''}`;
       markerElement.style.cssText = `
-        width: ${markerSize}px;
-        height: ${markerSize}px;
+        width: ${markerSize}px !important;
+        height: ${markerSize}px !important;
         border-radius: 50%;
         border: ${borderWidth}px solid ${isMyDevice ? '#a855f7' : 'white'};
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         transition: transform 0.2s ease;
         background-color: ${getStatusColor(device.status)};
-        position: relative;
+        position: absolute;
         touch-action: manipulation;
+        transform: translate(-50%, -50%);
       `;
 
       // Add hover/touch effects
       markerElement.addEventListener('mouseenter', () => {
-        if (!isMobile) markerElement.style.transform = 'scale(1.2)';
+        if (!isMobile) markerElement.style.transform = 'translate(-50%, -50%) scale(1.2)';
       });
       markerElement.addEventListener('mouseleave', () => {
-        if (!isMobile) markerElement.style.transform = 'scale(1)';
+        if (!isMobile) markerElement.style.transform = 'translate(-50%, -50%) scale(1)';
       });
       
       markerElement.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        markerElement.style.transform = 'scale(1.1)';
+        markerElement.style.transform = 'translate(-50%, -50%) scale(1.1)';
       });
       markerElement.addEventListener('touchend', () => {
-        markerElement.style.transform = 'scale(1)';
+        markerElement.style.transform = 'translate(-50%, -50%) scale(1)';
       });
 
       // Create popup content with improved button
       const popupContent = `
-        <div style="padding: ${isMobile ? '16px' : '12px'}; background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); border-radius: 8px; color: white; min-width: ${isMobile ? '280px' : '250px'}; max-width: ${isMobile ? '320px' : '300px'}; font-family: system-ui;">
+        <div style="padding: ${isMobile ? '16px' : '12px'}; background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); border-radius: 8px; color: white; width: ${isMobile ? '280px' : '250px'}; font-family: system-ui; max-width: 90vw; overflow: hidden;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: ${isMobile ? '12px' : '8px'};">
-            <h3 style="margin: 0; font-size: ${isMobile ? '18px' : '16px'}; font-weight: bold; line-height: 1.2;">${device.device_name || 'Unknown Device'}</h3>
-            ${isMyDevice ? `<span style="background: #a855f7; padding: ${isMobile ? '4px 8px' : '2px 6px'}; border-radius: 4px; font-size: ${isMobile ? '11px' : '10px'}; font-weight: bold;">MY DEVICE</span>` : ''}
+            <h3 style="margin: 0; font-size: ${isMobile ? '18px' : '16px'}; font-weight: bold; line-height: 1.2; word-break: break-word;">${device.device_name || 'Unknown Device'}</h3>
+            ${isMyDevice ? `<span style="background: #a855f7; padding: ${isMobile ? '4px 8px' : '2px 6px'}; border-radius: 4px; font-size: ${isMobile ? '11px' : '10px'}; font-weight: bold; white-space: nowrap;">MY DEVICE</span>` : ''}
           </div>
           
-          <div style="font-size: ${isMobile ? '13px' : '12px'}; opacity: 0.9; margin-bottom: ${isMobile ? '12px' : '8px'}; line-height: 1.4;">
+          <div style="font-size: ${isMobile ? '13px' : '12px'}; opacity: 0.9; margin-bottom: ${isMobile ? '12px' : '8px'}; line-height: 1.4; word-break: break-all;">
             <p style="margin: ${isMobile ? '4px 0' : '2px 0'};"><strong>MAC:</strong> ${device.mac_address}</p>
             ${device.ip_address ? `<p style="margin: ${isMobile ? '4px 0' : '2px 0'};"><strong>IP:</strong> ${device.ip_address}</p>` : ''}
             <p style="margin: ${isMobile ? '4px 0' : '2px 0'};"><strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
@@ -381,22 +384,22 @@ export const DeviceMap = () => {
             </p>
           </div>
           
-          ${device.manual_location_notes ? `<p style="margin: ${isMobile ? '8px 0 0 0' : '6px 0 0 0'}; font-size: ${isMobile ? '12px' : '11px'}; opacity: 0.7; font-style: italic;">${device.manual_location_notes}</p>` : ''}
+          ${device.manual_location_notes ? `<p style="margin: ${isMobile ? '8px 0 0 0' : '6px 0 0 0'}; font-size: ${isMobile ? '12px' : '11px'}; opacity: 0.7; font-style: italic; word-break: break-word;">${device.manual_location_notes}</p>` : ''}
           
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: ${isMobile ? '12px' : '8px'}; font-size: ${isMobile ? '11px' : '10px'}; opacity: 0.6;">
-            <span>${device.manual_latitude ? 'Manual location' : 'Auto-detected location'}</span>
-            ${isMyDevice ? `<button id="navigate-btn-${device.id}" style="background: #a855f7; border: none; padding: ${isMobile ? '8px 12px' : '6px 10px'}; border-radius: 4px; color: white; cursor: pointer; font-size: ${isMobile ? '12px' : '11px'}; display: flex; align-items: center; gap: 4px; touch-action: manipulation; min-height: ${isMobile ? '36px' : '32px'}; font-weight: 500; transition: background-color 0.2s;">View My Devices</button>` : ''}
+            <span style="flex: 1;">${device.manual_latitude ? 'Manual location' : 'Auto-detected location'}</span>
+            ${isMyDevice ? `<button id="navigate-btn-${device.id}" style="background: #a855f7; border: none; padding: ${isMobile ? '8px 12px' : '6px 10px'}; border-radius: 4px; color: white; cursor: pointer; font-size: ${isMobile ? '12px' : '11px'}; display: flex; align-items: center; gap: 4px; touch-action: manipulation; min-height: ${isMobile ? '36px' : '32px'}; font-weight: 500; transition: background-color 0.2s; margin-left: 8px; white-space: nowrap;">View My Devices</button>` : ''}
           </div>
         </div>
       `;
 
-      const popupOffset = Math.max(15, markerSize / 2 + 5);
+      // Improved popup positioning to prevent cutoff
       const popup = new mapboxgl.Popup({
-        offset: popupOffset,
+        offset: [0, -Math.max(20, markerSize / 2 + 10)],
         closeButton: true,
         closeOnClick: false,
         className: 'device-popup',
-        maxWidth: isMobile ? '320px' : '300px',
+        maxWidth: isMobile ? '90vw' : '300px',
         anchor: 'bottom',
         focusAfterOpen: false
       }).setHTML(popupContent);
@@ -421,7 +424,11 @@ export const DeviceMap = () => {
         }
       });
 
-      const marker = new mapboxgl.Marker(markerElement)
+      // Create marker with proper anchoring to prevent position shifting
+      const marker = new mapboxgl.Marker({
+        element: markerElement,
+        anchor: 'center'
+      })
         .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map.current!);
