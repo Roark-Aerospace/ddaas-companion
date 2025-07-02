@@ -26,12 +26,10 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
     setLocationError(null);
     
     try {
-      // Check if geolocation is supported
-      if (!navigator.geolocation && typeof window !== 'undefined' && !(window as any).Capacitor) {
-        throw new Error('Geolocation is not supported by this browser');
-      }
+      // Check if we're in a Capacitor environment (mobile app)
+      const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor;
 
-      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+      if (isCapacitor) {
         // For mobile devices with Capacitor
         try {
           // First check permissions
@@ -101,69 +99,69 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
           }
         }
       } else {
-        // For web/development, use browser geolocation
-        try {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-              resolve, 
-              reject, 
-              {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 60000
-              }
-            );
-          });
-          
-          const locationData: LocationData = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          };
-          
-          onLocationFound(locationData);
-          
-          toast({
-            title: "Location Found",
-            description: `Coordinates: ${locationData.latitude.toFixed(6)}, ${locationData.longitude.toFixed(6)}`,
-          });
-        } catch (browserError: any) {
-          console.error('Browser location error:', browserError);
-          
-          if (browserError.code === 1) { // PERMISSION_DENIED
-            setLocationError('Location access denied. Please allow location access in your browser and try again.');
-            toast({
-              title: "Location Access Denied",
-              description: "Please click 'Allow' when prompted for location access, or enable location in your browser settings.",
-              variant: "destructive",
-            });
-          } else if (browserError.code === 2) { // POSITION_UNAVAILABLE
-            setLocationError('Location services unavailable. Please check your device location settings.');
-            toast({
-              title: "Location Unavailable",
-              description: "Unable to determine your location. Please check your device location settings.",
-              variant: "destructive",
-            });
-          } else if (browserError.code === 3) { // TIMEOUT
-            setLocationError('Location request timed out. Please try again.');
-            toast({
-              title: "Location Timeout",
-              description: "Location request took too long. Please try again.",
-              variant: "destructive",
-            });
-          } else {
-            throw browserError;
-          }
+        // For web browsers - ensure geolocation is supported and trigger permission request
+        if (!navigator.geolocation) {
+          throw new Error('Geolocation is not supported by this browser');
         }
+
+        // This will automatically trigger the browser's permission request dialog
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 60000
+            }
+          );
+        });
+        
+        const locationData: LocationData = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        };
+        
+        onLocationFound(locationData);
+        
+        toast({
+          title: "Location Found",
+          description: `Coordinates: ${locationData.latitude.toFixed(6)}, ${locationData.longitude.toFixed(6)}`,
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Location error:', error);
-      setLocationError('Unable to get location. Please check your device settings and try again.');
-      toast({
-        title: "Location Failed",
-        description: "Unable to get current location. Please check your device settings and try again.",
-        variant: "destructive",
-      });
+      
+      if (error.code === 1) { // PERMISSION_DENIED
+        setLocationError('Location access denied. Please click "Allow" when prompted or enable location in your browser settings.');
+        toast({
+          title: "Location Access Denied",
+          description: "Please click 'Allow' when prompted for location access, or enable location in your browser settings and refresh the page.",
+          variant: "destructive",
+        });
+      } else if (error.code === 2) { // POSITION_UNAVAILABLE
+        setLocationError('Location services unavailable. Please check your device location settings.');
+        toast({
+          title: "Location Unavailable",
+          description: "Unable to determine your location. Please check your device location settings.",
+          variant: "destructive",
+        });
+      } else if (error.code === 3) { // TIMEOUT
+        setLocationError('Location request timed out. Please try again.');
+        toast({
+          title: "Location Timeout",
+          description: "Location request took too long. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        setLocationError('Unable to get location. Please check your device settings and try again.');
+        toast({
+          title: "Location Failed",
+          description: "Unable to get current location. Please check your device settings and try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsGettingLocation(false);
     }
@@ -180,7 +178,7 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
       // For web browsers, provide instructions
       toast({
         title: "Enable Location Access",
-        description: "Click the location icon in your browser's address bar or check your browser's location settings.",
+        description: "Click the location icon in your browser's address bar or check your browser's location settings. You may need to refresh the page after enabling location access.",
       });
     }
   };
