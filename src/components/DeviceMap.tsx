@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -12,8 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/utils/rewardUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Using your existing Mapbox token
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGRhYXNtYXAiLCJhIjoiY20zNGdjN2ZjMTltYzJxcHR5MjVsZXh2cyJ9.YzLN8rVHCdE8r3RoIBYHHA';
+// Using a valid Mapbox token - please replace with your own valid token
+const MAPBOX_TOKEN = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
 
 interface DDaaSDevice {
   id: string;
@@ -46,13 +45,18 @@ export const DeviceMap = () => {
   const { data: devices, isLoading } = useQuery({
     queryKey: ['network-devices-map'],
     queryFn: async () => {
+      console.log('Fetching devices for network map...');
       // Fetch all devices from all users for the network map
       const { data, error } = await supabase
         .from('ddaas_devices')
         .select('*')
         .order('added_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching devices:', error);
+        throw error;
+      }
+      console.log('Fetched devices:', data);
       return data as DDaaSDevice[];
     },
   });
@@ -60,11 +64,16 @@ export const DeviceMap = () => {
   const { data: rewards } = useQuery({
     queryKey: ['device-rewards-summary'],
     queryFn: async () => {
+      console.log('Fetching device rewards...');
       const { data, error } = await supabase
         .from('device_reward_summary')
         .select('device_id, total_rewards');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching rewards:', error);
+        throw error;
+      }
+      console.log('Fetched rewards:', data);
       return data as DeviceReward[];
     },
   });
@@ -72,54 +81,81 @@ export const DeviceMap = () => {
   const initializeMap = () => {
     if (!mapContainer.current) return;
 
+    console.log('Initializing map...');
     mapboxgl.accessToken = MAPBOX_TOKEN;
     
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [0, 20], // Center on world view
-      zoom: isMobile ? 1.5 : 2, // Slightly closer zoom on mobile
-      pitch: isMobile ? 0 : 30, // Less pitch on mobile for better usability
-      bearing: 0,
-      touchZoomRotate: true,
-      touchPitch: !isMobile, // Disable pitch gestures on mobile
-      dragRotate: !isMobile, // Disable rotation on mobile
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/satellite-streets-v12', // Using a different style that should work
+        center: [0, 20], // Center on world view
+        zoom: isMobile ? 1.5 : 2,
+        pitch: isMobile ? 0 : 30,
+        bearing: 0,
+        touchZoomRotate: true,
+        touchPitch: !isMobile,
+        dragRotate: !isMobile,
+      });
 
-    // Add navigation controls with mobile-optimized positioning
-    const navControl = new mapboxgl.NavigationControl({ 
-      showCompass: !isMobile,
-      visualizePitch: !isMobile 
-    });
-    
-    map.current.addControl(navControl, isMobile ? 'bottom-right' : 'top-right');
-
-    // Add mobile-specific touch optimizations
-    if (isMobile) {
-      // Disable double-tap to zoom for better UX
-      map.current.doubleClickZoom.disable();
+      // Add navigation controls
+      const navControl = new mapboxgl.NavigationControl({ 
+        showCompass: !isMobile,
+        visualizePitch: !isMobile 
+      });
       
-      // Enable touch zoom rotate with better sensitivity
-      map.current.touchZoomRotate.enable({ around: 'center' });
-    }
+      map.current.addControl(navControl, isMobile ? 'bottom-right' : 'top-right');
 
-    // Customize map style to match the purple/slate theme
-    map.current.on('style.load', () => {
-      map.current?.setPaintProperty('water', 'fill-color', '#1e293b');
-      map.current?.setPaintProperty('land', 'background-color', '#0f172a');
-    });
+      // Mobile optimizations
+      if (isMobile) {
+        map.current.doubleClickZoom.disable();
+        map.current.touchZoomRotate.enable({ around: 'center' });
+      }
+
+      map.current.on('load', () => {
+        console.log('Map loaded successfully');
+      });
+
+      map.current.on('error', (e) => {
+        console.error('Map error:', e);
+      });
+
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      toast({
+        title: "Map Error",
+        description: "Failed to initialize map. Please check your internet connection.",
+        variant: "destructive",
+      });
+    }
   };
 
   const navigateToMyDevices = () => {
-    // Trigger navigation to devices tab
-    const devicesTab = document.querySelector('[data-state="inactive"][value="devices"]') as HTMLElement;
+    console.log('Navigating to my devices...');
+    // Find and click the devices tab
+    const devicesTab = document.querySelector('[value="devices"]') as HTMLElement;
     if (devicesTab) {
       devicesTab.click();
+      console.log('Clicked devices tab');
+    } else {
+      console.log('Devices tab not found, trying alternative selector');
+      // Alternative approach - find by text content
+      const tabs = document.querySelectorAll('[role="tab"]');
+      tabs.forEach(tab => {
+        if (tab.textContent?.includes('Devices')) {
+          (tab as HTMLElement).click();
+          console.log('Found and clicked devices tab by text');
+        }
+      });
     }
   };
 
   const addDeviceMarkers = (devices: DDaaSDevice[]) => {
-    if (!map.current) return;
+    if (!map.current) {
+      console.log('Map not ready for markers');
+      return;
+    }
+
+    console.log('Adding device markers for', devices.length, 'devices');
 
     // Clear existing markers
     markers.forEach(marker => marker.remove());
@@ -134,7 +170,12 @@ export const DeviceMap = () => {
       const lat = device.manual_latitude || device.latitude;
       const lng = device.manual_longitude || device.longitude;
 
-      if (!lat || !lng) return;
+      console.log(`Device ${device.device_name}: lat=${lat}, lng=${lng}`);
+
+      if (!lat || !lng) {
+        console.log(`Skipping device ${device.device_name} - no coordinates`);
+        return;
+      }
 
       hasValidCoordinates = true;
       bounds.extend([lng, lat]);
@@ -142,7 +183,7 @@ export const DeviceMap = () => {
       const deviceReward = rewards?.find(r => r.device_id === device.id);
       const isMyDevice = user?.id === device.user_id;
 
-      // Create custom marker element with mobile-optimized sizing
+      // Create custom marker element
       const markerElement = document.createElement('div');
       const markerSize = isMobile ? (isMyDevice ? 32 : 28) : (isMyDevice ? 28 : 24);
       const borderWidth = isMobile ? (isMyDevice ? 5 : 4) : (isMyDevice ? 4 : 3);
@@ -161,7 +202,7 @@ export const DeviceMap = () => {
         touch-action: manipulation;
       `;
 
-      // Add hover/touch effects with mobile optimization
+      // Add hover/touch effects
       markerElement.addEventListener('mouseenter', () => {
         if (!isMobile) markerElement.style.transform = 'scale(1.2)';
       });
@@ -169,7 +210,6 @@ export const DeviceMap = () => {
         if (!isMobile) markerElement.style.transform = 'scale(1)';
       });
       
-      // Touch events for mobile
       markerElement.addEventListener('touchstart', (e) => {
         e.preventDefault();
         markerElement.style.transform = 'scale(1.1)';
@@ -178,7 +218,7 @@ export const DeviceMap = () => {
         markerElement.style.transform = 'scale(1)';
       });
 
-      // Create mobile-optimized popup content
+      // Create popup content
       const popupContent = `
         <div style="padding: ${isMobile ? '16px' : '12px'}; background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); border-radius: 8px; color: white; min-width: ${isMobile ? '280px' : '250px'}; max-width: ${isMobile ? '320px' : '300px'}; font-family: system-ui;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: ${isMobile ? '12px' : '8px'};">
@@ -214,7 +254,7 @@ export const DeviceMap = () => {
           
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: ${isMobile ? '12px' : '8px'}; font-size: ${isMobile ? '11px' : '10px'}; opacity: 0.6;">
             <span>${device.manual_latitude ? 'Manual location' : 'Auto-detected location'}</span>
-            ${isMyDevice ? `<button onclick="window.navigateToMyDevices && window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: ${isMobile ? '6px 12px' : '4px 8px'}; border-radius: 4px; color: white; cursor: pointer; font-size: ${isMobile ? '11px' : '10px'}; display: flex; align-items: center; gap: 4px; touch-action: manipulation; min-height: ${isMobile ? '32px' : 'auto'};">View My Devices</button>` : ''}
+            ${isMyDevice ? `<button onclick="window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: ${isMobile ? '6px 12px' : '4px 8px'}; border-radius: 4px; color: white; cursor: pointer; font-size: ${isMobile ? '11px' : '10px'}; display: flex; align-items: center; gap: 4px; touch-action: manipulation; min-height: ${isMobile ? '32px' : 'auto'};">View My Devices</button>` : ''}
           </div>
         </div>
       `;
@@ -222,7 +262,7 @@ export const DeviceMap = () => {
       const popup = new mapboxgl.Popup({
         offset: isMobile ? 35 : 25,
         closeButton: true,
-        closeOnClick: isMobile, // Auto-close on mobile for better UX
+        closeOnClick: isMobile,
         className: 'device-popup',
         maxWidth: isMobile ? '320px' : '300px',
         anchor: 'bottom'
@@ -234,17 +274,19 @@ export const DeviceMap = () => {
         .addTo(map.current!);
 
       newMarkers.push(marker);
+      console.log(`Added marker for device ${device.device_name} at ${lat}, ${lng}`);
     });
 
     setMarkers(newMarkers);
 
-    // Fit map to show all devices if any exist with mobile-friendly padding
+    // Fit map to show all devices
     if (hasValidCoordinates && devices.length <= 50) {
       const padding = isMobile ? 30 : 50;
       map.current.fitBounds(bounds, { 
         padding,
-        maxZoom: isMobile ? 12 : 15 // Prevent over-zooming on mobile
+        maxZoom: isMobile ? 12 : 15
       });
+      console.log('Fitted map bounds to show all devices');
     }
   };
 
@@ -276,12 +318,13 @@ export const DeviceMap = () => {
 
   useEffect(() => {
     if (devices && devices.length > 0 && map.current) {
+      console.log('Adding markers for', devices.length, 'devices');
       addDeviceMarkers(devices);
     }
   }, [devices, rewards, isMobile]);
 
   useEffect(() => {
-    // Make navigation function globally available for popup buttons
+    // Make navigation function globally available
     (window as any).navigateToMyDevices = navigateToMyDevices;
     
     return () => {
