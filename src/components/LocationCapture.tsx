@@ -108,7 +108,7 @@ export const LocationCapture = ({ location, onLocationFound }: LocationCapturePr
         }
 
         // Check if we're in a secure context (HTTPS) - required for geolocation in modern browsers
-        if (!window.isSecureContext && location.protocol !== 'http:' && location.hostname !== 'localhost') {
+        if (!window.isSecureContext && window.location.protocol !== 'http:' && window.location.hostname !== 'localhost') {
           setLocationError('Location access requires a secure connection (HTTPS). Please use HTTPS or localhost.');
           toast({
             title: "Secure Connection Required",
