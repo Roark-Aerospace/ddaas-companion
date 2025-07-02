@@ -11,8 +11,9 @@ import { MyRewards } from "@/components/MyRewards";
 import { ManageRewards } from "@/components/ManageRewards";
 import { AlertPreferences } from "@/components/AlertPreferences";
 import { AlertHistory } from "@/components/AlertHistory";
+import { DeviceMap } from "@/components/DeviceMap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, LogIn, UserPlus, Wifi, Gift, Bell, History } from "lucide-react";
+import { Shield, LogIn, UserPlus, Wifi, Gift, Bell, History, Map } from "lucide-react";
 
 const Index = () => {
   const { user, loading, signIn, signUp, signOut } = useAuth();
@@ -136,10 +137,14 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="devices" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 bg-white/10 backdrop-blur-lg border-white/20">
+          <TabsList className="grid w-full grid-cols-6 bg-white/10 backdrop-blur-lg border-white/20">
             <TabsTrigger value="devices" className="data-[state=active]:bg-white/20 text-white">
               <Wifi className="w-4 h-4 mr-2" />
               Devices
+            </TabsTrigger>
+            <TabsTrigger value="map" className="data-[state=active]:bg-white/20 text-white">
+              <Map className="w-4 h-4 mr-2" />
+              Map
             </TabsTrigger>
             <TabsTrigger value="rewards" className="data-[state=active]:bg-white/20 text-white">
               <Gift className="w-4 h-4 mr-2" />
@@ -164,6 +169,10 @@ const Index = () => {
               <AddDeviceSheet />
             </div>
             <MyDevicesList />
+          </TabsContent>
+
+          <TabsContent value="map" className="space-y-4">
+            <DeviceMap />
           </TabsContent>
 
           <TabsContent value="rewards" className="space-y-4">
