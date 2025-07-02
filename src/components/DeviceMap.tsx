@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -11,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/utils/rewardUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Using a valid Mapbox token - please replace with your own valid token
+// Using a valid public Mapbox token for demonstration
 const MAPBOX_TOKEN = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
 
 interface DDaaSDevice {
@@ -39,6 +40,7 @@ export const DeviceMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<mapboxgl.Marker[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
@@ -79,15 +81,15 @@ export const DeviceMap = () => {
   });
 
   const initializeMap = () => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || map.current) return;
 
-    console.log('Initializing map...');
+    console.log('Initializing map with token:', MAPBOX_TOKEN);
     mapboxgl.accessToken = MAPBOX_TOKEN;
     
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12', // Using a different style that should work
+        style: 'mapbox://styles/mapbox/streets-v12', // Using streets style which is more reliable
         center: [0, 20], // Center on world view
         zoom: isMobile ? 1.5 : 2,
         pitch: isMobile ? 0 : 30,
@@ -113,17 +115,33 @@ export const DeviceMap = () => {
 
       map.current.on('load', () => {
         console.log('Map loaded successfully');
+        setMapLoaded(true);
       });
 
       map.current.on('error', (e) => {
         console.error('Map error:', e);
+        toast({
+          title: "Map Error",
+          description: "Failed to load map tiles. The map may not display properly.",
+          variant: "destructive",
+        });
+      });
+
+      map.current.on('sourcedata', (e) => {
+        if (e.isSourceLoaded) {
+          console.log('Map source loaded:', e.sourceId);
+        }
+      });
+
+      map.current.on('styledata', () => {
+        console.log('Map style loaded');
       });
 
     } catch (error) {
       console.error('Error initializing map:', error);
       toast({
-        title: "Map Error",
-        description: "Failed to initialize map. Please check your internet connection.",
+        title: "Map Initialization Error",
+        description: "Failed to initialize map. Please refresh the page.",
         variant: "destructive",
       });
     }
@@ -131,26 +149,36 @@ export const DeviceMap = () => {
 
   const navigateToMyDevices = () => {
     console.log('Navigating to my devices...');
-    // Find and click the devices tab
+    // Find the devices tab by its value attribute
     const devicesTab = document.querySelector('[value="devices"]') as HTMLElement;
     if (devicesTab) {
       devicesTab.click();
-      console.log('Clicked devices tab');
+      console.log('Successfully clicked devices tab');
     } else {
-      console.log('Devices tab not found, trying alternative selector');
-      // Alternative approach - find by text content
-      const tabs = document.querySelectorAll('[role="tab"]');
-      tabs.forEach(tab => {
-        if (tab.textContent?.includes('Devices')) {
+      console.log('Devices tab not found, trying alternative approach');
+      // Find all tab triggers and look for the one containing "Devices"
+      const tabTriggers = document.querySelectorAll('[role="tab"]');
+      let found = false;
+      tabTriggers.forEach(tab => {
+        if (tab.textContent?.toLowerCase().includes('devices')) {
           (tab as HTMLElement).click();
-          console.log('Found and clicked devices tab by text');
+          found = true;
+          console.log('Found and clicked devices tab by text content');
         }
       });
+      if (!found) {
+        console.log('Could not find devices tab');
+        toast({
+          title: "Navigation Error",
+          description: "Could not navigate to devices tab",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const addDeviceMarkers = (devices: DDaaSDevice[]) => {
-    if (!map.current) {
+    if (!map.current || !mapLoaded) {
       console.log('Map not ready for markers');
       return;
     }
@@ -282,11 +310,15 @@ export const DeviceMap = () => {
     // Fit map to show all devices
     if (hasValidCoordinates && devices.length <= 50) {
       const padding = isMobile ? 30 : 50;
-      map.current.fitBounds(bounds, { 
-        padding,
-        maxZoom: isMobile ? 12 : 15
-      });
-      console.log('Fitted map bounds to show all devices');
+      try {
+        map.current.fitBounds(bounds, { 
+          padding,
+          maxZoom: isMobile ? 12 : 15
+        });
+        console.log('Fitted map bounds to show all devices');
+      } catch (error) {
+        console.error('Error fitting bounds:', error);
+      }
     }
   };
 
@@ -314,22 +346,28 @@ export const DeviceMap = () => {
 
   useEffect(() => {
     initializeMap();
+    
+    return () => {
+      markers.forEach(marker => marker.remove());
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
   }, [isMobile]);
 
   useEffect(() => {
-    if (devices && devices.length > 0 && map.current) {
+    if (devices && devices.length > 0 && mapLoaded) {
       console.log('Adding markers for', devices.length, 'devices');
       addDeviceMarkers(devices);
     }
-  }, [devices, rewards, isMobile]);
+  }, [devices, rewards, mapLoaded, user]);
 
   useEffect(() => {
     // Make navigation function globally available
     (window as any).navigateToMyDevices = navigateToMyDevices;
     
     return () => {
-      markers.forEach(marker => marker.remove());
-      map.current?.remove();
       delete (window as any).navigateToMyDevices;
     };
   }, []);
@@ -366,11 +404,19 @@ export const DeviceMap = () => {
             className={`w-full ${isMobile ? 'h-80' : 'h-96'} touch-manipulation`}
             style={{ touchAction: 'pan-x pan-y' }}
           />
-          {isLoading && (
+          {(isLoading || !mapLoaded) && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
               <div className="text-white text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                <div>Loading network devices...</div>
+                <div>{isLoading ? 'Loading network devices...' : 'Loading map...'}</div>
+              </div>
+            </div>
+          )}
+          {!mapLoaded && !isLoading && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-white text-center">
+                <div className="text-red-400 mb-2">Map failed to load</div>
+                <div className="text-sm">Please check your internet connection</div>
               </div>
             </div>
           )}
