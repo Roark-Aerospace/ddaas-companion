@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -152,33 +153,52 @@ export const DeviceMap = () => {
   };
 
   const getMarkerSizeForZoom = (zoom: number, isMyDevice: boolean) => {
-    // Base size calculation based on zoom level
-    const minSize = 8;
-    const maxSize = isMobile ? 32 : 28;
-    const zoomFactor = Math.max(0.3, Math.min(1, (zoom - 1) / 12)); // Scale between zoom 1-13
+    // Improved scaling logic - markers get smaller as you zoom out
+    const minSize = isMobile ? 6 : 8;
+    const maxSize = isMobile ? 24 : 20;
     
-    let baseSize = minSize + (maxSize - minSize) * zoomFactor;
+    // Zoom levels: 0 (world view) to 18+ (street level)
+    // At zoom 0-2: smallest size
+    // At zoom 8+: largest size
+    let scaleFactor;
+    if (zoom <= 2) {
+      scaleFactor = 0; // Minimum size
+    } else if (zoom >= 8) {
+      scaleFactor = 1; // Maximum size
+    } else {
+      scaleFactor = (zoom - 2) / 6; // Linear interpolation between zoom 2 and 8
+    }
+    
+    let baseSize = minSize + (maxSize - minSize) * scaleFactor;
     
     // Add extra size for user's own devices
     if (isMyDevice) {
-      baseSize *= 1.2;
+      baseSize *= 1.3;
     }
     
     return Math.round(baseSize);
   };
 
   const getBorderWidthForZoom = (zoom: number, isMyDevice: boolean) => {
-    const minBorder = 2;
-    const maxBorder = isMobile ? 5 : 4;
-    const zoomFactor = Math.max(0.3, Math.min(1, (zoom - 1) / 12));
+    const minBorder = 1;
+    const maxBorder = isMobile ? 3 : 2;
     
-    let borderWidth = minBorder + (maxBorder - minBorder) * zoomFactor;
+    let scaleFactor;
+    if (zoom <= 2) {
+      scaleFactor = 0;
+    } else if (zoom >= 8) {
+      scaleFactor = 1;
+    } else {
+      scaleFactor = (zoom - 2) / 6;
+    }
+    
+    let borderWidth = minBorder + (maxBorder - minBorder) * scaleFactor;
     
     if (isMyDevice) {
       borderWidth *= 1.2;
     }
     
-    return Math.round(borderWidth);
+    return Math.max(1, Math.round(borderWidth));
   };
 
   const updateMarkerSizes = () => {
@@ -187,16 +207,23 @@ export const DeviceMap = () => {
     const currentZoom = map.current.getZoom();
     console.log('Updating marker sizes for zoom level:', currentZoom);
     
-    markers.forEach((marker, index) => {
+    markers.forEach((marker) => {
       const markerElement = marker.getElement();
       const isMyDevice = markerElement.classList.contains('my-device');
       
       const newSize = getMarkerSizeForZoom(currentZoom, isMyDevice);
       const newBorderWidth = getBorderWidthForZoom(currentZoom, isMyDevice);
       
+      // Update size without affecting positioning
       markerElement.style.width = `${newSize}px`;
       markerElement.style.height = `${newSize}px`;
       markerElement.style.borderWidth = `${newBorderWidth}px`;
+      
+      // Update popup offset to match new marker size
+      const popup = marker.getPopup();
+      if (popup) {
+        popup.options.offset = Math.max(15, newSize / 2 + 5);
+      }
     });
   };
 
@@ -300,7 +327,7 @@ export const DeviceMap = () => {
         border: ${borderWidth}px solid ${isMyDevice ? '#a855f7' : 'white'};
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        transition: transform 0.2s ease, width 0.3s ease, height 0.3s ease, border-width 0.3s ease;
+        transition: transform 0.2s ease;
         background-color: ${getStatusColor(device.status)};
         position: relative;
         touch-action: manipulation;
@@ -363,10 +390,11 @@ export const DeviceMap = () => {
         </div>
       `;
 
+      const popupOffset = Math.max(15, markerSize / 2 + 5);
       const popup = new mapboxgl.Popup({
-        offset: Math.max(25, markerSize / 2 + 10),
+        offset: popupOffset,
         closeButton: true,
-        closeOnClick: false, // Changed to false so button clicks work
+        closeOnClick: false,
         className: 'device-popup',
         maxWidth: isMobile ? '320px' : '300px',
         anchor: 'bottom',
