@@ -127,6 +127,11 @@ export const DeviceMap = () => {
         });
       });
 
+      // Add zoom event listener to update marker sizes
+      map.current.on('zoom', () => {
+        updateMarkerSizes();
+      });
+
       map.current.on('sourcedata', (e) => {
         if (e.isSourceLoaded) {
           console.log('Map source loaded:', e.sourceId);
@@ -145,6 +150,55 @@ export const DeviceMap = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const getMarkerSizeForZoom = (zoom: number, isMyDevice: boolean) => {
+    // Base size calculation based on zoom level
+    const minSize = 8;
+    const maxSize = isMobile ? 32 : 28;
+    const zoomFactor = Math.max(0.3, Math.min(1, (zoom - 1) / 12)); // Scale between zoom 1-13
+    
+    let baseSize = minSize + (maxSize - minSize) * zoomFactor;
+    
+    // Add extra size for user's own devices
+    if (isMyDevice) {
+      baseSize *= 1.2;
+    }
+    
+    return Math.round(baseSize);
+  };
+
+  const getBorderWidthForZoom = (zoom: number, isMyDevice: boolean) => {
+    const minBorder = 2;
+    const maxBorder = isMobile ? 5 : 4;
+    const zoomFactor = Math.max(0.3, Math.min(1, (zoom - 1) / 12));
+    
+    let borderWidth = minBorder + (maxBorder - minBorder) * zoomFactor;
+    
+    if (isMyDevice) {
+      borderWidth *= 1.2;
+    }
+    
+    return Math.round(borderWidth);
+  };
+
+  const updateMarkerSizes = () => {
+    if (!map.current) return;
+    
+    const currentZoom = map.current.getZoom();
+    console.log('Updating marker sizes for zoom level:', currentZoom);
+    
+    markers.forEach((marker, index) => {
+      const markerElement = marker.getElement();
+      const isMyDevice = markerElement.classList.contains('my-device');
+      
+      const newSize = getMarkerSizeForZoom(currentZoom, isMyDevice);
+      const newBorderWidth = getBorderWidthForZoom(currentZoom, isMyDevice);
+      
+      markerElement.style.width = `${newSize}px`;
+      markerElement.style.height = `${newSize}px`;
+      markerElement.style.borderWidth = `${newBorderWidth}px`;
+    });
   };
 
   const navigateToMyDevices = () => {
@@ -192,6 +246,7 @@ export const DeviceMap = () => {
     const newMarkers: mapboxgl.Marker[] = [];
     const bounds = new mapboxgl.LngLatBounds();
     let hasValidCoordinates = false;
+    const currentZoom = map.current.getZoom();
 
     devices.forEach((device) => {
       // Use manual coordinates if available, otherwise fall back to auto-captured
@@ -211,12 +266,12 @@ export const DeviceMap = () => {
       const deviceReward = rewards?.find(r => r.device_id === device.id);
       const isMyDevice = user?.id === device.user_id;
 
-      // Create custom marker element
+      // Create custom marker element with zoom-responsive sizing
       const markerElement = document.createElement('div');
-      const markerSize = isMobile ? (isMyDevice ? 32 : 28) : (isMyDevice ? 28 : 24);
-      const borderWidth = isMobile ? (isMyDevice ? 5 : 4) : (isMyDevice ? 4 : 3);
+      const markerSize = getMarkerSizeForZoom(currentZoom, isMyDevice);
+      const borderWidth = getBorderWidthForZoom(currentZoom, isMyDevice);
       
-      markerElement.className = 'device-marker touch-manipulation';
+      markerElement.className = `device-marker touch-manipulation ${isMyDevice ? 'my-device' : ''}`;
       markerElement.style.cssText = `
         width: ${markerSize}px;
         height: ${markerSize}px;
@@ -224,7 +279,7 @@ export const DeviceMap = () => {
         border: ${borderWidth}px solid ${isMyDevice ? '#a855f7' : 'white'};
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        transition: transform 0.2s ease;
+        transition: transform 0.2s ease, width 0.3s ease, height 0.3s ease, border-width 0.3s ease;
         background-color: ${getStatusColor(device.status)};
         position: relative;
         touch-action: manipulation;
@@ -288,7 +343,7 @@ export const DeviceMap = () => {
       `;
 
       const popup = new mapboxgl.Popup({
-        offset: isMobile ? 35 : 25,
+        offset: Math.max(25, markerSize / 2 + 10),
         closeButton: true,
         closeOnClick: isMobile,
         className: 'device-popup',
