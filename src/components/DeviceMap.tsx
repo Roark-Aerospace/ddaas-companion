@@ -2,16 +2,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Settings, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/utils/rewardUtils';
+
+// Using your existing Mapbox token
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGRhYXNtYXAiLCJhIjoiY20zNGdjN2ZjMTltYzJxcHR5MjVsZXh2cyJ9.YzLN8rVHCdE8r3RoIBYHHA';
 
 interface DDaaSDevice {
   id: string;
@@ -37,8 +38,6 @@ interface DeviceReward {
 export const DeviceMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
-  const [showTokenInput, setShowTokenInput] = useState(true);
   const [markers, setMarkers] = useState<mapboxgl.Marker[]>([]);
   const { user } = useAuth();
 
@@ -54,7 +53,6 @@ export const DeviceMap = () => {
       if (error) throw error;
       return data as DDaaSDevice[];
     },
-    enabled: !!mapboxToken,
   });
 
   const { data: rewards } = useQuery({
@@ -67,13 +65,12 @@ export const DeviceMap = () => {
       if (error) throw error;
       return data as DeviceReward[];
     },
-    enabled: !!mapboxToken,
   });
 
-  const initializeMap = (token: string) => {
+  const initializeMap = () => {
     if (!mapContainer.current) return;
 
-    mapboxgl.accessToken = token;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -235,25 +232,9 @@ export const DeviceMap = () => {
     }
   };
 
-  const handleTokenSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mapboxToken.trim()) {
-      toast({
-        title: "Token Required",
-        description: "Please enter your Mapbox access token",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setShowTokenInput(false);
-    initializeMap(mapboxToken);
-    
-    toast({
-      title: "Network Map Initialized",
-      description: "All network devices will now be displayed on the map",
-    });
-  };
+  useEffect(() => {
+    initializeMap();
+  }, []);
 
   useEffect(() => {
     if (devices && devices.length > 0 && map.current) {
@@ -271,49 +252,6 @@ export const DeviceMap = () => {
       delete (window as any).navigateToMyDevices;
     };
   }, []);
-
-  if (showTokenInput) {
-    return (
-      <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center">
-            <Settings className="w-5 h-5 mr-2" />
-            Mapbox Configuration
-          </CardTitle>
-          <CardDescription className="text-slate-300">
-            Enter your Mapbox access token to display all network devices on the map
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleTokenSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="mapbox-token" className="text-white">
-                Mapbox Access Token
-              </Label>
-              <Input
-                id="mapbox-token"
-                type="password"
-                placeholder="pk.eyJ1IjoieW91ci11c2VybmFtZSIsImEiOiJjbGV..."
-                value={mapboxToken}
-                onChange={(e) => setMapboxToken(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
-              />
-            </div>
-            <Button type="submit" className="w-full bg-purple-600/80 hover:bg-purple-600 text-white">
-              <MapPin className="w-4 h-4 mr-2" />
-              Initialize Network Map
-            </Button>
-            <div className="text-xs text-slate-400 bg-white/5 p-3 rounded">
-              <p className="font-medium mb-1">How to get your Mapbox token:</p>
-              <p>1. Visit mapbox.com and create a free account</p>
-              <p>2. Go to your Account page and find the "Access tokens" section</p>
-              <p>3. Copy your "Default public token"</p>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -333,15 +271,6 @@ export const DeviceMap = () => {
           >
             <ExternalLink className="w-4 h-4 mr-2" />
             My Devices
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowTokenInput(true)}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Reconfigure
           </Button>
         </div>
       </div>
