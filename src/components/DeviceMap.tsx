@@ -12,8 +12,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/utils/rewardUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Using a valid public Mapbox token for demonstration
-const MAPBOX_TOKEN = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+// Using your Mapbox token
+const MAPBOX_TOKEN = 'pk.eyJ1Ijoicm9hcmthZXJvc3BhY2UiLCJhIjoiY21jaHppZDQ5MDFvbTJqcXZyZWI1eGhudCJ9.Doqz785QAMfwql3jhYvduw';
 
 interface DDaaSDevice {
   id: string;
@@ -89,8 +89,8 @@ export const DeviceMap = () => {
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // Using streets style which is more reliable
-        center: [0, 20], // Center on world view
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [0, 20],
         zoom: isMobile ? 1.5 : 2,
         pitch: isMobile ? 0 : 30,
         bearing: 0,
@@ -122,7 +122,7 @@ export const DeviceMap = () => {
         console.error('Map error:', e);
         toast({
           title: "Map Error",
-          description: "Failed to load map tiles. The map may not display properly.",
+          description: "Failed to load map tiles. Please check your internet connection.",
           variant: "destructive",
         });
       });
