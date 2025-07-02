@@ -214,21 +214,6 @@ const Index = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Instructions */}
-        <div className="text-center text-xs text-slate-400 space-y-2">
-          <p>Mobile App Ready for iOS and Android</p>
-          <div className="text-left bg-black/20 p-3 rounded-lg">
-            <ol className="space-y-1 text-xs leading-relaxed">
-              <li>1. Export to GitHub</li>
-              <li>2. Run: npm install</li>
-              <li>3. Run: npx cap add ios/android</li>
-              <li>4. Run: npm run build</li>
-              <li>5. Run: npx cap sync</li>
-              <li>6. Run: npx cap run ios/android</li>
-            </ol>
-          </div>
-        </div>
       </div>
     </div>
   );
