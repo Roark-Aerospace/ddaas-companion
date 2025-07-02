@@ -1,6 +1,6 @@
-
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -253,7 +253,7 @@ export const AddDeviceSheet = () => {
           Add a DDaaS Device
         </Button>
       </SheetTrigger>
-      <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20">
+      <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20 w-[400px] sm:w-[540px]">
         <SheetHeader>
           <SheetTitle className="text-white">Add DDaaS Device</SheetTitle>
           <SheetDescription className="text-slate-300">
@@ -261,216 +261,218 @@ export const AddDeviceSheet = () => {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-6 mt-6">
-          {/* Step 1: WiFi Scanning */}
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <WifiIcon className="w-5 h-5 mr-2" />
-                Step 1: Scan WiFi Networks
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                Scan for available WiFi devices and their MAC addresses
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={scanWifiDevices}
-                disabled={isScanning}
-                className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                {isScanning ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Scanning WiFi...
-                  </>
-                ) : (
-                  <>
-                    <WifiIcon className="w-4 h-4 mr-2" />
-                    Scan WiFi Networks
-                  </>
-                )}
-              </Button>
-
-              {wifiDevices.length > 0 && (
-                <>
-                  <Button 
-                    onClick={scanNetworkDevices}
-                    disabled={isNetworkScanning}
-                    className="w-full bg-blue-600/80 hover:bg-blue-600 text-white"
-                  >
-                    {isNetworkScanning ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Scanning Network...
-                      </>
-                    ) : (
-                      <>
-                        <Network className="w-4 h-4 mr-2" />
-                        Scan for IP Addresses
-                      </>
-                    )}
-                  </Button>
-
-                  <div className="space-y-2">
-                    <Label className="text-white">Select a Device:</Label>
-                    <div className="max-h-40 overflow-y-auto space-y-2">
-                      {wifiDevices.map((device, index) => (
-                        <Card 
-                          key={index}
-                          className={`cursor-pointer transition-colors ${
-                            selectedDevice?.bssid === device.bssid 
-                              ? 'bg-white/30 border-white/50' 
-                              : 'bg-white/10 border-white/20 hover:bg-white/20'
-                          }`}
-                          onClick={() => setSelectedDevice(device)}
-                        >
-                          <CardContent className="p-3">
-                            <div className="text-sm">
-                              <div className="font-medium text-white flex items-center justify-between">
-                                <span>{device.ssid || 'Hidden Network'}</span>
-                                {device.ip && (
-                                  <Badge variant="secondary" className="bg-green-600/80 text-white">
-                                    <Network className="w-3 h-3 mr-1" />
-                                    {device.ip}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-slate-300">MAC: {device.bssid}</div>
-                              <div className="text-slate-400">Signal: {device.level} dBm</div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* IP Address Input */}
-          {selectedDevice && !selectedDevice.ip && (
+        <ScrollArea className="h-[calc(100vh-120px)] mt-6 pr-4">
+          <div className="space-y-6">
+            {/* Step 1: WiFi Scanning */}
             <Card className="bg-white/10 backdrop-blur-lg border-white/20">
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
-                  <Network className="w-5 h-5 mr-2" />
-                  Manual IP Address
+                  <WifiIcon className="w-5 h-5 mr-2" />
+                  Step 1: Scan WiFi Networks
                 </CardTitle>
                 <CardDescription className="text-slate-300">
-                  Enter the IP address for monitoring this device
+                  Scan for available WiFi devices and their MAC addresses
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="manualIp" className="text-white">IP Address</Label>
-                  <Input
-                    id="manualIp"
-                    placeholder="192.168.1.100"
-                    value={manualIp}
-                    onChange={(e) => setManualIp(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Location */}
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <MapPin className="w-5 h-5 mr-2" />
-                Step 2: Get Location
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                Capture GPS coordinates for the device location
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={getCurrentLocation}
-                disabled={isGettingLocation}
-                className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                {isGettingLocation ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Getting Location...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="w-4 h-4 mr-2" />
-                    Get Current Location
-                  </>
-                )}
-              </Button>
-
-              {location && (
-                <div className="bg-white/10 p-3 rounded-lg">
-                  <div className="text-sm text-white">
-                    <div>Latitude: {location.latitude.toFixed(6)}</div>
-                    <div>Longitude: {location.longitude.toFixed(6)}</div>
-                    <div>Accuracy: {location.accuracy.toFixed(1)}m</div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Step 3: Device Name and Save */}
-          {selectedDevice && location && (selectedDevice.ip || manualIp) && (
-            <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <Zap className="w-5 h-5 mr-2" />
-                  Step 3: Save Device
-                </CardTitle>
-                <CardDescription className="text-slate-300">
-                  Give your device a name and save it for monitoring
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deviceName" className="text-white">Device Name (Optional)</Label>
-                  <Input
-                    id="deviceName"
-                    placeholder={selectedDevice.ssid || 'Enter device name'}
-                    value={deviceName}
-                    onChange={(e) => setDeviceName(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
-                  />
-                </div>
-
-                <div className="bg-white/10 p-3 rounded-lg">
-                  <div className="text-sm text-white">
-                    <div><strong>MAC:</strong> {selectedDevice.bssid}</div>
-                    <div><strong>IP:</strong> {selectedDevice.ip || manualIp}</div>
-                    <div><strong>Network:</strong> {selectedDevice.ssid}</div>
-                  </div>
-                </div>
-
                 <Button 
-                  onClick={saveDevice}
-                  disabled={isSaving}
-                  className="w-full bg-green-600/80 hover:bg-green-600 text-white"
+                  onClick={scanWifiDevices}
+                  disabled={isScanning}
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
                 >
-                  {isSaving ? (
+                  {isScanning ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving Device...
+                      Scanning WiFi...
                     </>
                   ) : (
                     <>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Save DDaaS Device
+                      <WifiIcon className="w-4 h-4 mr-2" />
+                      Scan WiFi Networks
                     </>
                   )}
                 </Button>
+
+                {wifiDevices.length > 0 && (
+                  <>
+                    <Button 
+                      onClick={scanNetworkDevices}
+                      disabled={isNetworkScanning}
+                      className="w-full bg-blue-600/80 hover:bg-blue-600 text-white"
+                    >
+                      {isNetworkScanning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Scanning Network...
+                        </>
+                      ) : (
+                        <>
+                          <Network className="w-4 h-4 mr-2" />
+                          Scan for IP Addresses
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="space-y-2">
+                      <Label className="text-white">Select a Device:</Label>
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {wifiDevices.map((device, index) => (
+                          <Card 
+                            key={index}
+                            className={`cursor-pointer transition-colors ${
+                              selectedDevice?.bssid === device.bssid 
+                                ? 'bg-white/30 border-white/50' 
+                                : 'bg-white/10 border-white/20 hover:bg-white/20'
+                            }`}
+                            onClick={() => setSelectedDevice(device)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="text-sm">
+                                <div className="font-medium text-white flex items-center justify-between">
+                                  <span>{device.ssid || 'Hidden Network'}</span>
+                                  {device.ip && (
+                                    <Badge variant="secondary" className="bg-green-600/80 text-white">
+                                      <Network className="w-3 h-3 mr-1" />
+                                      {device.ip}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-slate-300">MAC: {device.bssid}</div>
+                                <div className="text-slate-400">Signal: {device.level} dBm</div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
-          )}
-        </div>
+
+            {/* IP Address Input */}
+            {selectedDevice && !selectedDevice.ip && (
+              <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <Network className="w-5 h-5 mr-2" />
+                    Manual IP Address
+                  </CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Enter the IP address for monitoring this device
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="manualIp" className="text-white">IP Address</Label>
+                    <Input
+                      id="manualIp"
+                      placeholder="192.168.1.100"
+                      value={manualIp}
+                      onChange={(e) => setManualIp(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 2: Location */}
+            <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <MapPin className="w-5 h-5 mr-2" />
+                  Step 2: Get Location
+                </CardTitle>
+                <CardDescription className="text-slate-300">
+                  Capture GPS coordinates for the device location
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={getCurrentLocation}
+                  disabled={isGettingLocation}
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  {isGettingLocation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Getting Location...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Get Current Location
+                    </>
+                  )}
+                </Button>
+
+                {location && (
+                  <div className="bg-white/10 p-3 rounded-lg">
+                    <div className="text-sm text-white">
+                      <div>Latitude: {location.latitude.toFixed(6)}</div>
+                      <div>Longitude: {location.longitude.toFixed(6)}</div>
+                      <div>Accuracy: {location.accuracy.toFixed(1)}m</div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Step 3: Device Name and Save */}
+            {selectedDevice && location && (selectedDevice.ip || manualIp) && (
+              <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <Zap className="w-5 h-5 mr-2" />
+                    Step 3: Save Device
+                  </CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Give your device a name and save it for monitoring
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="deviceName" className="text-white">Device Name (Optional)</Label>
+                    <Input
+                      id="deviceName"
+                      placeholder={selectedDevice.ssid || 'Enter device name'}
+                      value={deviceName}
+                      onChange={(e) => setDeviceName(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  <div className="bg-white/10 p-3 rounded-lg">
+                    <div className="text-sm text-white">
+                      <div><strong>MAC:</strong> {selectedDevice.bssid}</div>
+                      <div><strong>IP:</strong> {selectedDevice.ip || manualIp}</div>
+                      <div><strong>Network:</strong> {selectedDevice.ssid}</div>
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={saveDevice}
+                    disabled={isSaving}
+                    className="w-full bg-green-600/80 hover:bg-green-600 text-white"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving Device...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Save DDaaS Device
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );
