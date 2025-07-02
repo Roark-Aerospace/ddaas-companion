@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,7 +143,7 @@ const Index = () => {
             </TabsTrigger>
             <TabsTrigger value="map" className="data-[state=active]:bg-white/20 text-white">
               <Map className="w-4 h-4 mr-2" />
-              Map
+              Network Map
             </TabsTrigger>
             <TabsTrigger value="rewards" className="data-[state=active]:bg-white/20 text-white">
               <Gift className="w-4 h-4 mr-2" />

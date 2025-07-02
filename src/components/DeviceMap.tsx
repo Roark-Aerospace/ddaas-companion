@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Settings } from 'lucide-react';
+import { MapPin, Settings, ExternalLink } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { formatCurrency, formatDate } from '@/utils/rewardUtils';
 
 interface DDaaSDevice {
   id: string;
@@ -22,6 +24,14 @@ interface DDaaSDevice {
   manual_location_notes: string | null;
   status: string | null;
   ip_address: string | null;
+  user_id: string;
+  added_at: string;
+  last_seen: string | null;
+}
+
+interface DeviceReward {
+  device_id: string;
+  total_rewards: number | null;
 }
 
 export const DeviceMap = () => {
@@ -30,10 +40,12 @@ export const DeviceMap = () => {
   const [mapboxToken, setMapboxToken] = useState('');
   const [showTokenInput, setShowTokenInput] = useState(true);
   const [markers, setMarkers] = useState<mapboxgl.Marker[]>([]);
+  const { user } = useAuth();
 
   const { data: devices, isLoading } = useQuery({
-    queryKey: ['ddaas-devices-map'],
+    queryKey: ['network-devices-map'],
     queryFn: async () => {
+      // Fetch all devices from all users for the network map
       const { data, error } = await supabase
         .from('ddaas_devices')
         .select('*')
@@ -41,6 +53,19 @@ export const DeviceMap = () => {
 
       if (error) throw error;
       return data as DDaaSDevice[];
+    },
+    enabled: !!mapboxToken,
+  });
+
+  const { data: rewards } = useQuery({
+    queryKey: ['device-rewards-summary'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('device_reward_summary')
+        .select('device_id, total_rewards');
+
+      if (error) throw error;
+      return data as DeviceReward[];
     },
     enabled: !!mapboxToken,
   });
@@ -53,8 +78,8 @@ export const DeviceMap = () => {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-74.006, 40.7128], // Default to NYC
-      zoom: 10,
+      center: [0, 20], // Center on world view
+      zoom: 2,
     });
 
     // Add navigation controls with dark theme
@@ -63,12 +88,19 @@ export const DeviceMap = () => {
       'top-right'
     );
 
-    // Customize map style to match app theme
+    // Customize map style to match the purple/slate theme
     map.current.on('style.load', () => {
-      // Add custom styling to match the purple/slate theme
       map.current?.setPaintProperty('water', 'fill-color', '#1e293b');
       map.current?.setPaintProperty('land', 'background-color', '#0f172a');
     });
+  };
+
+  const navigateToMyDevices = () => {
+    // Trigger navigation to devices tab
+    const devicesTab = document.querySelector('[data-state="inactive"][value="devices"]') as HTMLElement;
+    if (devicesTab) {
+      devicesTab.click();
+    }
   };
 
   const addDeviceMarkers = (devices: DDaaSDevice[]) => {
@@ -92,18 +124,22 @@ export const DeviceMap = () => {
       hasValidCoordinates = true;
       bounds.extend([lng, lat]);
 
+      const deviceReward = rewards?.find(r => r.device_id === device.id);
+      const isMyDevice = user?.id === device.user_id;
+
       // Create custom marker element with status-based styling
       const markerElement = document.createElement('div');
       markerElement.className = 'device-marker';
       markerElement.style.cssText = `
-        width: 24px;
-        height: 24px;
+        width: ${isMyDevice ? '28px' : '24px'};
+        height: ${isMyDevice ? '28px' : '24px'};
         border-radius: 50%;
-        border: 3px solid white;
+        border: ${isMyDevice ? '4px solid #a855f7' : '3px solid white'};
         cursor: pointer;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         transition: transform 0.2s ease;
         background-color: ${getStatusColor(device.status)};
+        position: relative;
       `;
 
       // Add hover effect
@@ -114,19 +150,44 @@ export const DeviceMap = () => {
         markerElement.style.transform = 'scale(1)';
       });
 
-      // Create popup content
+      // Create popup content with comprehensive device information
       const popupContent = `
-        <div style="padding: 8px; background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); border-radius: 8px; color: white; min-width: 200px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">${device.device_name || 'Unknown Device'}</h3>
-          <p style="margin: 0 0 4px 0; font-size: 12px; opacity: 0.8;">MAC: ${device.mac_address}</p>
-          ${device.ip_address ? `<p style="margin: 0 0 4px 0; font-size: 12px; opacity: 0.8;">IP: ${device.ip_address}</p>` : ''}
-          <p style="margin: 0 0 4px 0; font-size: 12px;">
-            Status: <span style="color: ${getStatusTextColor(device.status)}; font-weight: bold;">${device.status || 'Unknown'}</span>
-          </p>
-          ${device.manual_location_notes ? `<p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.7; font-style: italic;">${device.manual_location_notes}</p>` : ''}
-          <p style="margin: 4px 0 0 0; font-size: 10px; opacity: 0.6;">
-            ${device.manual_latitude ? 'Manual location' : 'Auto-detected location'}
-          </p>
+        <div style="padding: 12px; background: linear-gradient(135deg, #1e293b 0%, #7c3aed 100%); border-radius: 8px; color: white; min-width: 250px; font-family: system-ui;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: bold;">${device.device_name || 'Unknown Device'}</h3>
+            ${isMyDevice ? '<span style="background: #a855f7; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">MY DEVICE</span>' : ''}
+          </div>
+          
+          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">
+            <p style="margin: 2px 0;"><strong>MAC:</strong> ${device.mac_address}</p>
+            ${device.ip_address ? `<p style="margin: 2px 0;"><strong>IP:</strong> ${device.ip_address}</p>` : ''}
+            <p style="margin: 2px 0;"><strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+          </div>
+          
+          <div style="margin: 8px 0; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+            <p style="margin: 2px 0; font-size: 12px;">
+              <strong>Status:</strong> <span style="color: ${getStatusTextColor(device.status)}; font-weight: bold;">${device.status || 'Unknown'}</span>
+            </p>
+            <p style="margin: 2px 0; font-size: 11px; opacity: 0.8;">
+              <strong>Added:</strong> ${formatDate(device.added_at)}
+            </p>
+            <p style="margin: 2px 0; font-size: 11px; opacity: 0.8;">
+              <strong>Last Seen:</strong> ${formatDate(device.last_seen)}
+            </p>
+          </div>
+          
+          <div style="margin: 8px 0; padding: 6px; background: rgba(16, 185, 129, 0.1); border-radius: 4px; border-left: 3px solid #10b981;">
+            <p style="margin: 2px 0; font-size: 12px; color: #86efac;">
+              <strong>Total Rewards:</strong> ${deviceReward?.total_rewards ? formatCurrency(Number(deviceReward.total_rewards)) : '$0.00'}
+            </p>
+          </div>
+          
+          ${device.manual_location_notes ? `<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.7; font-style: italic;">${device.manual_location_notes}</p>` : ''}
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 10px; opacity: 0.6;">
+            <span>${device.manual_latitude ? 'Manual location' : 'Auto-detected location'}</span>
+            ${isMyDevice ? `<button onclick="window.navigateToMyDevices && window.navigateToMyDevices()" style="background: #a855f7; border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 10px; display: flex; align-items: center; gap: 2px;">View My Devices</button>` : ''}
+          </div>
         </div>
       `;
 
@@ -146,8 +207,8 @@ export const DeviceMap = () => {
 
     setMarkers(newMarkers);
 
-    // Fit map to show all devices
-    if (hasValidCoordinates) {
+    // Fit map to show all devices if any exist
+    if (hasValidCoordinates && devices.length <= 50) {
       map.current.fitBounds(bounds, { padding: 50 });
     }
   };
@@ -189,8 +250,8 @@ export const DeviceMap = () => {
     initializeMap(mapboxToken);
     
     toast({
-      title: "Map Initialized",
-      description: "Your device locations will now be displayed on the map",
+      title: "Network Map Initialized",
+      description: "All network devices will now be displayed on the map",
     });
   };
 
@@ -198,12 +259,16 @@ export const DeviceMap = () => {
     if (devices && devices.length > 0 && map.current) {
       addDeviceMarkers(devices);
     }
-  }, [devices]);
+  }, [devices, rewards]);
 
   useEffect(() => {
+    // Make navigation function globally available for popup buttons
+    (window as any).navigateToMyDevices = navigateToMyDevices;
+    
     return () => {
       markers.forEach(marker => marker.remove());
       map.current?.remove();
+      delete (window as any).navigateToMyDevices;
     };
   }, []);
 
@@ -216,7 +281,7 @@ export const DeviceMap = () => {
             Mapbox Configuration
           </CardTitle>
           <CardDescription className="text-slate-300">
-            Enter your Mapbox access token to display device locations on the map
+            Enter your Mapbox access token to display all network devices on the map
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -236,7 +301,7 @@ export const DeviceMap = () => {
             </div>
             <Button type="submit" className="w-full bg-purple-600/80 hover:bg-purple-600 text-white">
               <MapPin className="w-4 h-4 mr-2" />
-              Initialize Map
+              Initialize Network Map
             </Button>
             <div className="text-xs text-slate-400 bg-white/5 p-3 rounded">
               <p className="font-medium mb-1">How to get your Mapbox token:</p>
@@ -254,20 +319,31 @@ export const DeviceMap = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white">Device Locations</h3>
+          <h3 className="text-lg font-semibold text-white">Global Network Map</h3>
           <p className="text-slate-300 text-sm">
-            {devices?.length || 0} devices • Manual coordinates take preference
+            {devices?.length || 0} devices network-wide • Your devices have purple borders
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowTokenInput(true)}
-          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Reconfigure
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={navigateToMyDevices}
+            className="bg-purple-600/20 border-purple-400/30 text-purple-300 hover:bg-purple-600/30"
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            My Devices
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTokenInput(true)}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Reconfigure
+          </Button>
+        </div>
       </div>
 
       <Card className="bg-white/10 backdrop-blur-lg border-white/20 overflow-hidden">
@@ -275,24 +351,29 @@ export const DeviceMap = () => {
           <div ref={mapContainer} className="w-full h-96" />
           {isLoading && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-              <div className="text-white">Loading devices...</div>
+              <div className="text-white">Loading network devices...</div>
             </div>
           )}
         </div>
       </Card>
 
-      <div className="flex items-center space-x-4 text-sm text-slate-300">
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-          Online
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4 text-sm text-slate-300">
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+            Online
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+            Offline
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+            Unknown
+          </div>
         </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-          Offline
-        </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-          Unknown
+        <div className="text-xs text-slate-400">
+          Purple border = Your devices
         </div>
       </div>
     </div>
