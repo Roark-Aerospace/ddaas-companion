@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,21 +76,21 @@ export const ManageRewards = () => {
           Manage My Rewards
         </Button>
       </SheetTrigger>
-      <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20">
-        <SheetHeader>
+      <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20 flex flex-col">
+        <SheetHeader className="flex-shrink-0 pb-4">
           <SheetTitle className="text-white">Manage Payment Preferences</SheetTitle>
           <SheetDescription className="text-slate-300">
             Choose how you'd like to receive your rewards
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           {isLoading ? (
             <div className="text-center py-8">
               <div className="text-slate-300">Loading preferences...</div>
             </div>
           ) : selectedMethod ? (
-            <div>
+            <div className="pb-6">
               <Button 
                 variant="ghost" 
                 onClick={handleBack}
@@ -111,7 +112,7 @@ export const ManageRewards = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 pb-6">
               {/* Current Settings */}
               {paymentPreference && (
                 <Card className="bg-white/10 backdrop-blur-lg border-white/20">
@@ -190,7 +191,7 @@ export const ManageRewards = () => {
               </div>
             </div>
           )}
-        </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -188,15 +189,15 @@ export const MyDevicesList = () => {
           My DDaaS Devices
         </Button>
       </SheetTrigger>
-      <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20">
-        <SheetHeader>
+      <SheetContent className="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 text-white border-white/20 flex flex-col">
+        <SheetHeader className="flex-shrink-0 pb-4">
           <SheetTitle className="text-white">My DDaaS Devices</SheetTitle>
           <SheetDescription className="text-slate-300">
             Monitor and manage your registered DDaaS devices
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6">
+        <ScrollArea className="flex-1 -mx-6 px-6">
           {isLoading ? (
             <div className="text-center py-8">
               <div className="text-slate-300">Loading devices...</div>
@@ -214,7 +215,7 @@ export const MyDevicesList = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-6">
               {devices.map((device) => (
                 <Card key={device.id} className="bg-white/10 backdrop-blur-lg border-white/20">
                   <CardHeader>
@@ -314,7 +315,7 @@ export const MyDevicesList = () => {
               ))}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );
