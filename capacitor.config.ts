@@ -2,7 +2,7 @@
 import { CapacitorConfig } from '@capacitor/core @capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'lovable.9bf6d4d481ef4a6b8c9260342f66d66d.app',
+  appId: 'lovable.ddaascompanion.app',
   appName: 'Roark DDaaS Companion',
   webDir: 'dist',
   bundledWebRuntime: false,
